@@ -1,0 +1,5 @@
+# Optional: Demucs stem separation (`npm run setup -- --with-stems`).
+# torchaudio >= 2.9 moved audio saving to a separate package that Demucs doesn't use yet, so pin 2.8.
+torch==2.8.*
+torchaudio==2.8.*
+demucs==4.0.1

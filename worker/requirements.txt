@@ -1,0 +1,8 @@
+# Core analysis worker (always installed by `npm run setup`)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+numpy>=1.26
+scipy>=1.11
+librosa>=0.10.2
+soundfile>=0.12
+pytest>=8
