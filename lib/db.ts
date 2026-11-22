@@ -1,20 +1,20 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import { DATA_DIR, DB_PATH, SCHEMA_PATH } from "./paths";
 
+// Node's built-in SQLite (no compiled add-on to install or break when Node updates).
+
 declare global {
   // eslint-disable-next-line no-var
-  var __dropDb: Database.Database | undefined;
+  var __dropDb: DatabaseSync | undefined;
 }
 
 /** One connection per server process (survives Next.js hot reloads). */
-export function db(): Database.Database {
+export function db(): DatabaseSync {
   if (!globalThis.__dropDb) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
-    const conn = new Database(DB_PATH);
-    conn.pragma("journal_mode = WAL");
-    conn.pragma("busy_timeout = 15000");
-    conn.pragma("foreign_keys = ON");
+    const conn = new DatabaseSync(DB_PATH);
+    conn.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 15000; PRAGMA foreign_keys = ON;");
     conn.exec(fs.readFileSync(SCHEMA_PATH, "utf8"));
     globalThis.__dropDb = conn;
   }

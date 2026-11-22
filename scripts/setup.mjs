@@ -19,8 +19,10 @@ console.log(bold("\nDrop Studio setup\n") + dim(ROOT));
 // 1. Node
 step("1. Node.js");
 const [major, minor] = process.versions.node.split(".").map(Number);
-if (major > 20 || (major === 20 && minor >= 9)) ok(`Node ${process.versions.node}`);
-else { fail(`Node ${process.versions.node} is too old`, "Install Node 20 or newer: https://nodejs.org (or `brew install node`)"); finish(); }
+let hasSqlite = false;
+try { await import("node:sqlite"); hasSqlite = true; } catch { /* too old */ }
+if ((major > 22 || (major === 22 && minor >= 13)) && hasSqlite) ok(`Node ${process.versions.node}`);
+else { fail(`Node ${process.versions.node} is too old (need 22.13 or newer)`, isMac ? "Install the current LTS:  brew install node   (or download it from https://nodejs.org)" : "Install Node 22 LTS or newer from https://nodejs.org"); finish(); }
 
 // 2. FFmpeg
 step("2. FFmpeg");

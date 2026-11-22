@@ -7,7 +7,7 @@ Turn a finished EDM track into a YouTube-ready music video, a Shorts cut and a t
 
 ## Quick start (Mac)
 
-You need [Node.js 20+](https://nodejs.org) and [Homebrew](https://brew.sh). Then, in this folder:
+You need [Node.js 22.13+](https://nodejs.org) and [Homebrew](https://brew.sh). Then, in this folder:
 
 ```bash
 npm run setup     # one time: installs FFmpeg, uv, Python 3.11 and the analysis libraries

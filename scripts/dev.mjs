@@ -18,6 +18,11 @@ if (!venvReady()) {
   console.error(red(bold("\nDrop Studio isn't set up yet.")) + "\nRun " + bold("npm run setup") + " once, then " + bold("npm run dev") + ".\n");
   process.exit(1);
 }
+const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 13)) {
+  console.error(red(bold(`\nNode ${process.versions.node} is too old.`)) + " Drop Studio needs Node 22.13 or newer.\nOn a Mac:  " + bold("brew install node") + "   then  " + bold("npm run setup") + "\n");
+  process.exit(1);
+}
 const nextBin = path.join(ROOT, "node_modules", ".bin", IS_WIN ? "next.cmd" : "next");
 if (!existsSync(nextBin)) {
   console.error(red(bold("\nWeb app packages are missing.")) + " Run " + bold("npm run setup") + " first.\n");
@@ -41,7 +46,11 @@ for (const [port, what] of [[PORT, "web app"], [Number(WORKER_PORT), "analysis w
   }
 }
 
-const env = { ...process.env, NEXT_TELEMETRY_DISABLED: "1", FORCE_COLOR: process.stdout.isTTY ? "1" : "0" };
+const env = {
+  ...process.env,
+  NEXT_TELEMETRY_DISABLED: "1",
+  // node:sqlite prints an "experimental" notice on every start; it is stable enough for us.
+  NODE_OPTIONS: [process.env.NODE_OPTIONS, "--disable-warning=ExperimentalWarning"].filter(Boolean).join(" "), FORCE_COLOR: process.stdout.isTTY ? "1" : "0" };
 
 const SERVICES = {
   web: { color: "\x1b[35m", cmd: nextBin, args: ["dev", "-p", String(PORT)], env },
