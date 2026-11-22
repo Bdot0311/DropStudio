@@ -151,8 +151,8 @@ process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 process.on("SIGHUP", () => shutdown(0));
 
-console.log(`\n  ${bold("Drop Studio")}  →  ${cyan(`http://localhost:${PORT}`)}`);
-console.log(dim(`  Node ${process.versions.node} · ${process.platform} ${process.arch} · ${ROOT}`));
+OUT.write(`\n  ${bold("Drop Studio")}  →  ${cyan(`http://localhost:${PORT}`)}\n`);
+OUT.write(dim(`  Node ${process.versions.node} · ${process.platform} ${process.arch} · ${os.release()} · ${ROOT}\n`));
 OUT.write(dim(`  Compiler: ${useTurbo ? "Turbopack" : "webpack"} · log: data/logs/dev.log\n`));
 const home = os.homedir();
 if (process.platform === "darwin" && [path.join(home, "Desktop"), path.join(home, "Documents"), path.join(home, "Library", "Mobile Documents")].some((d) => ROOT.startsWith(d + path.sep))) {
