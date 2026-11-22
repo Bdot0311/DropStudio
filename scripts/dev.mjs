@@ -4,7 +4,8 @@
 // unexpectedly (for any reason, even a "clean" exit), we say so clearly, show why,
 // and restart it, so the app at http://localhost:3000 doesn't silently disappear.
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import os from "node:os";
 import net from "node:net";
 import path from "node:path";
 import { ROOT, PY, venvReady, pythonEnv, bold, cyan, yellow, red, dim, has, IS_WIN } from "./lib.mjs";
@@ -52,12 +53,34 @@ const env = {
   // node:sqlite prints an "experimental" notice on every start; it is stable enough for us.
   NODE_OPTIONS: [process.env.NODE_OPTIONS, "--disable-warning=ExperimentalWarning"].filter(Boolean).join(" "), FORCE_COLOR: process.stdout.isTTY ? "1" : "0" };
 
+// Compiler: webpack by default. Next 16's Turbopack is faster but crashed on page
+// navigation on macOS for us (likely the open-file limit or an iCloud-synced folder).
+// Opt back in with:  npm run dev -- --turbo
+const useTurbo = process.argv.includes("--turbo");
+const nextArgs = ["dev", useTurbo ? "--turbopack" : "--webpack", "-p", String(PORT)];
+
+// macOS Terminal allows only 256 open files per program by default; dev servers need far more.
+const wrap = (cmd, args) =>
+  IS_WIN ? [cmd, args] : ["/bin/sh", ["-c", 'ulimit -n 10240 2>/dev/null || ulimit -n 4096 2>/dev/null; exec "$0" "$@"', cmd, ...args]];
+
+// Everything printed is also saved to data/logs/dev.log, to share when something breaks.
+mkdirSync(path.join(ROOT, "data", "logs"), { recursive: true });
+const LOG_PATH = path.join(ROOT, "data", "logs", "dev.log");
+const logFile = createWriteStream(LOG_PATH, { flags: "w" });
+const strip = (t) => t.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "");
+const tee = (out) => ({ write: (t) => { out.write(t); logFile.write(strip(t)); } });
+const OUT = tee(process.stdout);
+const ERR = tee(process.stderr);
+
+const [webCmd, webArgs] = wrap(nextBin, nextArgs);
+const [pyCmd, pyArgs] = wrap(PY, ["-m", "uvicorn", "worker.app:app", "--host", "127.0.0.1", "--port", WORKER_PORT, "--log-level", "warning"]);
+
 const SERVICES = {
-  web: { color: "\x1b[35m", cmd: nextBin, args: ["dev", "-p", String(PORT)], env },
+  web: { color: "\x1b[35m", cmd: webCmd, args: webArgs, env },
   worker: {
     color: "\x1b[36m",
-    cmd: PY,
-    args: ["-m", "uvicorn", "worker.app:app", "--host", "127.0.0.1", "--port", WORKER_PORT, "--log-level", "warning"],
+    cmd: pyCmd,
+    args: pyArgs,
     env: { ...pythonEnv(), ...env },
   },
 };
@@ -88,8 +111,8 @@ function start(name) {
   // stdin is not passed through: neither process needs keyboard input.
   const child = spawn(s.cmd, s.args, { cwd: ROOT, env: s.env, stdio: ["ignore", "pipe", "pipe"] });
   children.set(name, child);
-  pipeLines(child.stdout, name, process.stdout);
-  pipeLines(child.stderr, name, process.stderr);
+  pipeLines(child.stdout, name, OUT);
+  pipeLines(child.stderr, name, ERR);
   child.on("error", (e) => console.error(`${prefix(name)} ${red("could not start:")} ${e.message}`));
   child.on("exit", (code, signal) => {
     children.delete(name);
@@ -98,16 +121,16 @@ function start(name) {
     const now = Date.now();
     restarts[name] = restarts[name].filter((t) => now - t < RESTART_WINDOW_MS);
     if (restarts[name].length >= MAX_RESTARTS) {
-      console.error(
+      ERR.write(
         `\n${prefix(name)} ${red(bold(`stopped ${MAX_RESTARTS} times in a minute (${why}). Giving up.`))}\n` +
           `${prefix(name)} Scroll up for the first error, open http://localhost:${PORT}/health if the web app is up,\n` +
-          `${prefix(name)} and send a screenshot of this window if you need help.\n`
+          `${prefix(name)} and send a screenshot of this window (or the file data/logs/dev.log) if you need help.\n`
       );
       shutdown(1);
       return;
     }
     restarts[name].push(now);
-    console.error(`${prefix(name)} ${yellow(`stopped unexpectedly (${why}). Restarting in 2 s…`)}`);
+    ERR.write(`${prefix(name)} ${yellow(`stopped unexpectedly (${why}). Restarting in 2 s…`)}\n`);
     setTimeout(() => !shuttingDown && start(name), 2000);
   });
 }
@@ -130,6 +153,11 @@ process.on("SIGHUP", () => shutdown(0));
 
 console.log(`\n  ${bold("Drop Studio")}  →  ${cyan(`http://localhost:${PORT}`)}`);
 console.log(dim(`  Node ${process.versions.node} · ${process.platform} ${process.arch} · ${ROOT}`));
+OUT.write(dim(`  Compiler: ${useTurbo ? "Turbopack" : "webpack"} · log: data/logs/dev.log\n`));
+const home = os.homedir();
+if (process.platform === "darwin" && [path.join(home, "Desktop"), path.join(home, "Documents"), path.join(home, "Library", "Mobile Documents")].some((d) => ROOT.startsWith(d + path.sep))) {
+  OUT.write(yellow("  Note: this folder may be synced by iCloud, which can break dev servers. If pages fail to load,\n  move the DropStudio folder to your home folder (e.g. ~/DropStudio) and run it from there.\n"));
+}
 console.log(dim("  Press Ctrl+C to stop.\n"));
 start("worker");
 start("web");

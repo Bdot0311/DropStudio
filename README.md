@@ -11,7 +11,7 @@ You need [Node.js 22.13+](https://nodejs.org) and [Homebrew](https://brew.sh). T
 
 ```bash
 npm run setup     # one time: installs FFmpeg, uv, Python 3.11 and the analysis libraries
-npm run dev       # starts everything; open http://localhost:3000
+npm run dev       # starts everything; open http://localhost:3000 (log: data/logs/dev.log)
 ```
 
 `npm run setup` is safe to re-run. Optional extras:
