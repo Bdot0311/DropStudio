@@ -1,0 +1,252 @@
+import React, { useLayoutEffect, useMemo, useRef } from "react";
+import { AbsoluteFill, Freeze, Img, OffthreadVideo, useVideoConfig } from "remotion";
+import { presetConfig, type PresetConfig } from "../lib/presets/configs";
+import { ShaderCanvas, type Uniforms } from "./gl/ShaderCanvas";
+import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, sectionAt } from "./lib/music";
+import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline";
+import type { VideoProps } from "./types";
+
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+
+type Props = VideoProps & {
+  /** Song time in seconds to draw. */
+  t: number;
+  /** Composition frame (for grain/flicker seeds). */
+  frame: number;
+  /** Distinguishes GL canvases when two Visuals are on screen (loop crossfade). */
+  slotPrefix?: string;
+  /** Shader resolution multiplier (previews can render at half resolution). */
+  glScale?: number;
+};
+
+export function Visual(props: Props) {
+  const { map, style, t, frame } = props;
+  const { width, height, fps } = useVideoConfig();
+  const preset = presetConfig(props.preset);
+  const segs = useMemo(() => buildTimeline(map, preset, style, props.mode, props.clips), [map, preset, style, props.mode, props.clips]);
+  const colors = useMemo(() => preset.palette.map((h) => hueRotate(hexToRgb(h), style.hueShift)), [preset, style.hueShift]);
+
+  const si = segmentAt(segs, t);
+  const cur = segs[si];
+  const prev = si > 0 ? segs[si - 1] : null;
+  const local = t - cur.start;
+  const p = cur.transitionSeconds > 0 ? clamp01(local / cur.transitionSeconds) : 1;
+
+  const fpsE = map.env.fps;
+  const kick = envMax(map.env.kick, fpsE, t, 1 / fps);
+  const bass = envAt(map.env.bass, fpsE, t);
+  const high = envAt(map.env.high, fpsE, t);
+  const rms = envAt(map.env.rms, fpsE, t);
+  const b = beatInfo(map, t);
+  const r = preset.reactive;
+  const k = style.intensity;
+  const section = map.sections[sectionAt(map, t)];
+
+  const baseU = (seg: Segment): Uniforms => ({
+    time: motionTime(map, t) * r.speed + seg.seed * 50,
+    beat: b.phase,
+    kick: kick * Math.min(1.5, k),
+    bass, low: envAt(map.env.low, fpsE, t), mid: envAt(map.env.mid, fpsE, t), high,
+    energy: rms, int: k, seed: seg.seed,
+    chroma: r.chroma * k, grain: r.grain * k, bloom: r.bassBloom * k, drift: r.drift,
+    flick: r.hatFlicker * k * envAt(map.env.high, fpsE, t), frame,
+    colors: colors as [number, number, number][],
+  });
+
+  const glW = Math.round(width * (props.glScale ?? 1));
+  const glH = Math.round(height * (props.glScale ?? 1));
+  const slot = (seg: Segment) => `${props.slotPrefix ?? ""}gl${seg.index % 2}`;
+
+  const layer = (seg: Segment, css: React.CSSProperties) =>
+    seg.clip ? (
+      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={t - seg.start} fps={fps} style={css} />
+    ) : (
+      <ShaderCanvas key={slot(seg)} scene={seg.scene} u={baseU(seg)} width={glW} height={glH} style={css} />
+    );
+
+  // --- transitions ---
+  const layers: React.ReactNode[] = [];
+  let flash = 0;
+  const showPrev = prev && p < 1;
+  switch (cur.transition) {
+    case "crossfade":
+      if (showPrev) layers.push(layer(prev!, {}));
+      layers.push(layer(cur, { opacity: showPrev ? p : 1 }));
+      break;
+    case "flash":
+      layers.push(layer(cur, {}));
+      flash = Math.pow(1 - p, 2) * 0.95;
+      break;
+    case "whip": {
+      const e = 1 - Math.pow(1 - p, 3);
+      if (showPrev) layers.push(layer(prev!, { transform: `translateX(${-e * 100}%)`, filter: `blur(${(1 - Math.abs(0.5 - p) * 2) * 18}px)` }));
+      layers.push(layer(cur, { transform: `translateX(${(1 - e) * 100}%)`, filter: showPrev ? `blur(${(1 - Math.abs(0.5 - p) * 2) * 18}px)` : undefined }));
+      break;
+    }
+    case "zoom":
+      layers.push(layer(cur, { transform: `scale(${0.7 + 0.3 * p})` }));
+      if (showPrev) layers.push(layer(prev!, { transform: `scale(${1 + p * 2.5})`, opacity: 1 - p }));
+      break;
+    case "glitch": {
+      const jitter = showPrev && frame % 3 !== 0;
+      if (jitter) layers.push(layer(prev!, { transform: `translateX(${(rand(frame) - 0.5) * 6}%)`, filter: "hue-rotate(90deg) saturate(2)" }));
+      else layers.push(layer(cur, showPrev ? { transform: `translateX(${(rand(frame + 1) - 0.5) * 3}%)` } : {}));
+      break;
+    }
+    default:
+      layers.push(layer(cur, {}));
+  }
+
+  // --- whole-stack motion and grade ---
+  const zoom = 1 + kick * r.kickZoom * k;
+  const shake = kick * r.kickShake * k * 100;
+  const sx = (rand(frame * 1.3) - 0.5) * shake, sy = (rand(frame * 2.1) - 0.5) * shake;
+  const sec = map.sections[cur.section];
+  const secProgress = clamp01((t - sec.start) / Math.max(0.01, sec.end - sec.start));
+  const grade =
+    sec.type === "drop" ? "saturate(1.15) contrast(1.08)"
+    : sec.type === "breakdown" ? "saturate(0.8) brightness(0.88)"
+    : sec.type === "build" ? `brightness(${0.95 + 0.15 * secProgress}) saturate(${1 + 0.15 * secProgress})`
+    : "saturate(0.92)";
+  const kickFlash = kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1);
+  const usesClip = !!cur.clip || (prev?.clip && p < 1);
+
+  return (
+    <AbsoluteFill style={{ background: preset.background, overflow: "hidden" }}>
+      <AbsoluteFill style={{ transform: `translate(${sx}%, ${sy}%) scale(${zoom})`, filter: grade }}>
+        {layers}
+        {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} />}
+      </AbsoluteFill>
+      {props.style.useCover && props.coverSrc && <CoverLayer src={props.coverSrc} map={map} t={t} kick={kick} bass={bass} preset={preset} />}
+      <TitleLayer {...props} presetCfg={preset} />
+      {(flash > 0 || kickFlash > 0.01) && (
+        <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
+      )}
+      {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
+    </AbsoluteFill>
+  );
+}
+
+function ClipLayer({ seg, local, fps, style }: { seg: Segment; local: number; fps: number; style: React.CSSProperties }) {
+  const c = seg.clip!;
+  const frame = Math.max(0, Math.round(clipTime(c, local) * fps));
+  const sx = (c.mirror ? -1 : 1) * c.zoom;
+  return (
+    <AbsoluteFill style={{ ...style, transform: `${style.transform ?? ""} scale(${sx}, ${c.zoom})` }}>
+      <Freeze frame={frame}>
+        <OffthreadVideo src={c.ref.src} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </Freeze>
+    </AbsoluteFill>
+  );
+}
+
+/** Ties AI footage to the preset: a palette tint and (deterministic) film grain. */
+function ClipTreatment({ preset, colors, frame, grain }: { preset: PresetConfig; colors: number[][]; frame: number; grain: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useLayoutEffect(() => {
+    const cv = ref.current;
+    if (!cv || grain <= 0) return;
+    const ctx = cv.getContext("2d")!;
+    const img = ctx.createImageData(cv.width, cv.height);
+    let s = (frame * 2654435761) >>> 0;
+    for (let i = 0; i < img.data.length; i += 4) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const v = s >>> 24;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }, [frame, grain]);
+  const tint = `rgb(${colors[2].map((c) => Math.round(c * 255)).join(",")})`;
+  return (
+    <>
+      <AbsoluteFill style={{ background: tint, mixBlendMode: "soft-light", opacity: preset.id === "techno" ? 0.15 : 0.3 }} />
+      {preset.id === "techno" && <AbsoluteFill style={{ backdropFilter: "grayscale(0.85) contrast(1.2)" }} />}
+      {grain > 0 && <canvas ref={ref} width={320} height={180} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", mixBlendMode: "overlay", opacity: Math.min(0.5, grain * 1.2), imageRendering: "pixelated" }} />}
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
+    </>
+  );
+}
+
+function CoverLayer({ src, map, t, kick, bass, preset }: { src: string; map: VideoProps["map"]; t: number; kick: number; bass: number; preset: PresetConfig }) {
+  const { width, height } = useVideoConfig();
+  const si = sectionAt(map, t);
+  const sec = map.sections[si];
+  const bar = (60 / map.bpm) * 4;
+  const visible = (type: string) => (type === "intro" || type === "breakdown" || type === "outro" ? 1 : 0);
+  // Fade in/out over one bar at section edges.
+  const vin = visible(sec.type);
+  const prevV = si > 0 ? visible(map.sections[si - 1].type) : vin;
+  const nextV = si + 1 < map.sections.length ? visible(map.sections[si + 1].type) : vin;
+  let o = vin;
+  if (prevV !== vin) o = prevV + (vin - prevV) * clamp01((t - sec.start) / bar);
+  if (nextV !== vin && t > sec.end - bar) o = vin + (nextV - vin) * clamp01((t - (sec.end - bar)) / bar);
+  if (o <= 0.001) return null;
+  const size = Math.min(width, height) * 0.42;
+  const scale = 1 + bass * 0.04 + kick * 0.025;
+  const drift = Math.sin(t * 0.25) * size * 0.03;
+  const blur = sec.type === "breakdown" ? 1.5 : 0;
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: o }}>
+      <Img
+        src={src}
+        style={{
+          width: size, height: size, objectFit: "cover", borderRadius: 6,
+          transform: `translateY(${drift}px) scale(${scale})`,
+          boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
+          filter: `${preset.id === "techno" ? "grayscale(1) contrast(1.2)" : ""} blur(${blur}px)`,
+        }}
+      />
+    </AbsoluteFill>
+  );
+}
+
+function TitleLayer(props: Props & { presetCfg: PresetConfig }) {
+  const { width, height } = useVideoConfig();
+  const { map, t, presetCfg: preset, titleMode, style } = props;
+  if (titleMode === "none" || !style.titleCard || !props.title) return null;
+  const ty = preset.typography;
+  const bar = (60 / map.bpm) * 4;
+  const vertical = height > width;
+  if (titleMode === "persistent") {
+    return (
+      <AbsoluteFill style={{ justifyContent: vertical ? "flex-start" : "flex-end", alignItems: "center", padding: vertical ? height * 0.08 : height * 0.06 }}>
+        <div style={{ textAlign: "center", color: "white", fontFamily: ty.family, fontWeight: ty.weight, letterSpacing: ty.tracking, textTransform: ty.transform, fontStyle: ty.style ?? "normal", textShadow: "0 2px 24px rgba(0,0,0,0.6)" }}>
+          <div style={{ fontSize: Math.min(width, height) * 0.045 }}>{props.artist}</div>
+          <div style={{ fontSize: Math.min(width, height) * 0.032, opacity: 0.85, marginTop: 6 }}>{props.title}</div>
+        </div>
+      </AbsoluteFill>
+    );
+  }
+  const start = map.downbeats[0] ?? 0;
+  const end = start + 8 * bar;
+  if (t < start || t > end) return null;
+  const o = Math.min(clamp01((t - start) / bar), clamp01((end - t) / (2 * bar)));
+  return (
+    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", opacity: o }}>
+      <div style={{ textAlign: "center", color: "white", fontFamily: ty.family, fontWeight: ty.weight, letterSpacing: ty.tracking, textTransform: ty.transform, fontStyle: ty.style ?? "normal", textShadow: "0 4px 40px rgba(0,0,0,0.7)", transform: `translateY(${(1 - o) * 10}px)` }}>
+        <div style={{ fontSize: Math.min(width, height) * 0.075, lineHeight: 1.1 }}>{props.artist}</div>
+        <div style={{ fontSize: Math.min(width, height) * 0.04, marginTop: Math.min(width, height) * 0.02, opacity: 0.85 }}>{props.title}</div>
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+function DebugOverlay(props: Props & { seg: Segment; kick: number }) {
+  const { map, t, frame, seg, kick } = props;
+  const { width } = useVideoConfig();
+  const b = beatInfo(map, t);
+  const s = Math.max(1, width / 1280);
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      <div style={{ position: "absolute", left: 16 * s, top: 16 * s, padding: `${8 * s}px ${12 * s}px`, background: "rgba(0,0,0,0.75)", color: "#0f0", fontFamily: "monospace", fontSize: 16 * s, lineHeight: 1.35, borderRadius: 4 * s }}>
+        <div>t {t.toFixed(3)}s · frame {frame}</div>
+        <div>bar {b.bar + 1}.{b.beatInBar + 1} · beat #{b.beatIndex + 1}</div>
+        <div>{map.sections[seg.section].type} · {seg.clip ? `clip ${seg.clip.ref.id}` : seg.scene} · cut {seg.index}</div>
+      </div>
+      <div style={{ position: "absolute", right: 16 * s, top: 16 * s, width: 48 * s, height: 48 * s, background: kick > 0.5 ? "#f00" : "#300", borderRadius: 4 * s, color: "white", fontFamily: "monospace", fontSize: 28 * s, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {b.beatInBar + 1}
+      </div>
+    </AbsoluteFill>
+  );
+}

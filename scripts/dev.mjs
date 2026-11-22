@@ -73,10 +73,13 @@ const OUT = tee(process.stdout);
 const ERR = tee(process.stderr);
 
 const [webCmd, webArgs] = wrap(nextBin, nextArgs);
+const tsxBin = path.join(ROOT, "node_modules", ".bin", IS_WIN ? "tsx.cmd" : "tsx");
+const [rCmd, rArgs] = wrap(tsxBin, ["node-worker/index.ts"]);
 const [pyCmd, pyArgs] = wrap(PY, ["-m", "uvicorn", "worker.app:app", "--host", "127.0.0.1", "--port", WORKER_PORT, "--log-level", "warning"]);
 
 const SERVICES = {
   web: { color: "\x1b[35m", cmd: webCmd, args: webArgs, env },
+  render: { color: "\x1b[33m", cmd: rCmd, args: rArgs, env },
   worker: {
     color: "\x1b[36m",
     cmd: pyCmd,
@@ -87,7 +90,7 @@ const SERVICES = {
 
 let shuttingDown = false;
 const children = new Map();
-const restarts = { web: [], worker: [] };
+const restarts = { web: [], worker: [], render: [] };
 
 function prefix(name) {
   const tag = `[${name}]`.padEnd(9);
@@ -160,4 +163,5 @@ if (process.platform === "darwin" && [path.join(home, "Desktop"), path.join(home
 }
 console.log(dim("  Press Ctrl+C to stop.\n"));
 start("worker");
+start("render");
 start("web");

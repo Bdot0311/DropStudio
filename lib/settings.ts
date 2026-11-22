@@ -11,7 +11,7 @@ export const SETTINGS = {
   default_provider: { secret: false, default: "none", label: "Default AI provider" },
   budget_cap_usd: { secret: false, default: "10", label: "Per-project budget cap (USD)" },
   render_concurrency: { secret: false, default: "", label: "Render concurrency" },
-  gl_backend: { secret: false, default: "angle", label: "Headless Chrome GL backend" },
+  gl_backend: { secret: false, default: "", label: "Headless Chrome GL backend" },
   default_artist: { secret: false, default: "", label: "Artist name" },
   link_spotify: { secret: false, default: "", label: "Spotify" },
   link_apple_music: { secret: false, default: "", label: "Apple Music" },

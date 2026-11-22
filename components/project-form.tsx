@@ -120,7 +120,7 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
           onClick={() => audioInput.current?.click()}
           className={cn(
             "grid cursor-pointer place-items-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors",
-            dragging ? "border-primary bg-primary/5" : "hover:border-primary/50"
+            dragging ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:border-primary/50"
           )}
         >
           <input ref={audioInput} type="file" accept={AUDIO_ACCEPT} hidden onChange={(e) => pickAudio(e.target.files?.[0])} />
@@ -165,7 +165,7 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
                 onClick={() => setPreset(p.id)}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-md border p-3 text-left transition-colors",
-                  preset === p.id ? "border-primary bg-primary/5" : "hover:bg-accent"
+                  preset === p.id ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent"
                 )}
               >
                 <span className="flex h-9 w-9 shrink-0 overflow-hidden rounded">
@@ -192,7 +192,7 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
                 onClick={() => setMode(m.id)}
                 className={cn(
                   "cursor-pointer rounded-md border p-3 text-left transition-colors",
-                  mode === m.id ? "border-primary bg-primary/5" : "hover:bg-accent"
+                  mode === m.id ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent"
                 )}
               >
                 <div className="flex items-center justify-between text-sm font-medium">

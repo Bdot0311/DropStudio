@@ -91,7 +91,13 @@ export async function runHealthChecks(): Promise<{ checks: Check[]; system: Reco
   }
 
   // Phase 2+ components (shown so the page is complete from day one)
-  checks.push({ id: "remotion", name: "Video renderer (Remotion)", status: "off", optional: true, detail: "Arrives in Phase 2" });
+  const hb = (db().prepare("SELECT value FROM settings WHERE key='_render_worker_heartbeat'").get() as { value: string } | undefined)?.value;
+  const alive = hb && Date.now() - Date.parse(hb) < 20000;
+  checks.push({
+    id: "render", name: "Video renderer (Remotion)", status: alive ? "ok" : "error",
+    detail: alive ? "Render worker running" : hb ? "Render worker stopped" : "Render worker hasn't started",
+    fix: alive ? undefined : "Start the app with `npm run dev` (it starts the render worker). The first render downloads a headless browser (~100 MB).",
+  });
 
   // Disk
   try {

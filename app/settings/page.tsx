@@ -145,12 +145,13 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label>Headless Chrome GL backend</Label>
-            <Select value={form.gl_backend || "angle"} onValueChange={set("gl_backend")}>
+            <Select value={form.gl_backend || "auto"} onValueChange={(v) => set("gl_backend")(v === "auto" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="angle">angle (recommended on Mac)</SelectItem>
+                <SelectItem value="auto">Automatic (angle on Mac)</SelectItem>
+                <SelectItem value="angle">angle (GPU, Mac)</SelectItem>
                 <SelectItem value="egl">egl</SelectItem>
                 <SelectItem value="swiftshader">swiftshader (CPU, slow, always works)</SelectItem>
                 <SelectItem value="swangle">swangle</SelectItem>

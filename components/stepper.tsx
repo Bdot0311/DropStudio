@@ -9,6 +9,7 @@ import type { Project } from "@/lib/types";
 function isDone(slug: string, p: Project): boolean {
   if (slug === "upload") return !!p.audio_file;
   if (slug === "analyze") return p.status === "analyzed";
+  if (slug === "style") return p.status === "analyzed";
   return false;
 }
 
