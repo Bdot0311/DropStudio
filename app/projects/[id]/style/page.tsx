@@ -157,6 +157,15 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
                 <TextField label="End card" placeholder="OUT NOW" value={style.captions.cta} onChange={(v) => set("captions", { ...style.captions, cta: v })} />
               </div>
             )}
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Transitions on cuts (ported from HyperFrames)</Label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {([["preset", "Preset"], ["whip", "Whip pan"], ["zoom", "Zoom through"], ["mix", "Mix"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("transitionMode", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.transitionMode === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Whip pan: one-beat lateral whip with motion blur. Zoom through: two-beat push with a light sweep and RGB flicker. The drop keeps its own entrance.</p>
+            </div>
             <Toggle id="letterbox" label="Cinematic letterbox bars (16:9 only)" checked={style.letterbox} onChange={(v) => set("letterbox", v)} />
           </CardContent>
         </Card>

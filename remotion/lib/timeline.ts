@@ -27,7 +27,7 @@ export function usesClips(mode: RenderMode, type: SectionType): boolean {
 }
 
 export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleConfig, mode: RenderMode, clips: ClipRef[]): Segment[] {
-  const key = `${map.duration}|${map.sections.map((s) => `${s.type}${s.start}`).join(",")}|${preset.id}|${style.cutRate}|${mode}|${clips.map((c) => c.id).join(",")}|${map.beats[0]}`;
+  const key = `${map.duration}|${map.sections.map((s) => `${s.type}${s.start}`).join(",")}|${preset.id}|${style.cutRate}|${style.transitionMode}|${mode}|${clips.map((c) => c.id).join(",")}|${map.beats[0]}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -63,10 +63,17 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         const w = preset.transitions.within;
         transition = rand(seed * 91) < preset.reactive.glitch ? "glitch" : w[Math.floor(rand(seed * 17) * w.length)];
       }
+      // Style override: HyperFrames-style transitions on cuts (the drop keeps its preset entrance for impact).
+      const tm = style.transitionMode ?? "preset";
+      if (tm !== "preset" && index > 0 && !(j === 0 && sec.type === "drop")) {
+        transition = tm === "whip" ? "whip_pan" : tm === "zoom" ? "zoom_through" : index % 2 ? "whip_pan" : "zoom_through";
+      }
       const transitionSeconds =
         transition === "crossfade" ? Math.min(preset.transitions.beats * beat, (bounds[j + 1] - bounds[j]) * 0.5)
         : transition === "cut" ? 0
         : transition === "flash" ? beat * 0.75
+        : transition === "whip_pan" ? Math.min(beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        : transition === "zoom_through" ? Math.min(2 * beat, (bounds[j + 1] - bounds[j]) * 0.5)
         : beat * 0.5;
 
       let clip: Segment["clip"] = null;

@@ -3,7 +3,7 @@
 import type { SectionType } from "../types";
 
 export type SceneId = "tunnel" | "particles" | "liquid" | "lasers" | "terrain" | "kaleido";
-export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom";
+export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom" | "whip_pan" | "zoom_through";
 
 export type PresetConfig = {
   id: "melodic" | "tech_house" | "techno" | "future_rave";
@@ -83,7 +83,7 @@ export const PRESET_CONFIGS: Record<PresetConfig["id"], PresetConfig> = {
     },
     cutBeats: { intro: 16, build: 8, drop: 4, breakdown: 16, outro: 16 },
     peakCutBeats: 4,
-    transitions: { within: ["cut", "whip", "zoom"], enter: { intro: "crossfade", build: "whip", drop: "zoom", breakdown: "crossfade", outro: "crossfade" }, beats: 1 },
+    transitions: { within: ["cut", "whip_pan", "zoom"], enter: { intro: "crossfade", build: "whip_pan", drop: "zoom", breakdown: "crossfade", outro: "crossfade" }, beats: 1 },
     reactive: { kickFlash: 0.12, kickZoom: 0.05, kickShake: 0.002, chroma: 0.25, bassBloom: 0.5, hatFlicker: 0.35, grain: 0.18, glitch: 0.05, drift: 0.5, speed: 0.9 },
     typography: { family: "'Futura', 'Avenir Next', 'Trebuchet MS', sans-serif", weight: 800, tracking: "0.04em", transform: "uppercase", style: "italic" },
     prompts: {
@@ -137,7 +137,7 @@ export const PRESET_CONFIGS: Record<PresetConfig["id"], PresetConfig> = {
     },
     cutBeats: { intro: 8, build: 4, drop: 4, breakdown: 16, outro: 8 },
     peakCutBeats: 1,
-    transitions: { within: ["cut", "zoom", "flash"], enter: { intro: "crossfade", build: "zoom", drop: "flash", breakdown: "crossfade", outro: "crossfade" }, beats: 1 },
+    transitions: { within: ["cut", "zoom_through", "flash"], enter: { intro: "crossfade", build: "zoom_through", drop: "flash", breakdown: "crossfade", outro: "crossfade" }, beats: 1 },
     reactive: { kickFlash: 0.3, kickZoom: 0.06, kickShake: 0.003, chroma: 0.8, bassBloom: 0.6, hatFlicker: 0.2, grain: 0.08, glitch: 0.1, drift: 0.6, speed: 1.3 },
     typography: { family: "'Eurostile', 'Orbitron', 'Avenir Next', sans-serif", weight: 800, tracking: "0.2em", transform: "uppercase" },
     prompts: {
@@ -167,6 +167,8 @@ export type StyleConfig = {
   editStyle: "clean" | "capcut";
   /** Caption look in CapCut mode (ported HyperFrames styles, see remotion/captionStyles.tsx). */
   captionStyle: "slam" | "glitch" | "karaoke" | "neon" | "gradient" | "decode";
+  /** Cut transitions: the preset's own, or HyperFrames-style whip pan / zoom through / a mix of both. */
+  transitionMode: "preset" | "whip" | "zoom" | "mix";
   letterbox: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
   captions: { hook: string; drop: string; cta: string };
@@ -174,5 +176,5 @@ export type StyleConfig = {
 
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
-  editStyle: "clean", captionStyle: "slam", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
 };

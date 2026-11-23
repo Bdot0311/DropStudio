@@ -46,7 +46,7 @@ On the **Style** page, **Edit style → CapCut** adds:
 - strobes that speed up into the drop, then a slam with shake;
 - RGB split on claps and light leaks at section changes.
 
-It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
+It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Cut transitions can be switched to HyperFrames-style **whip pan** (one beat, motion blur) or **zoom through** (two beats, light sweep and RGB flicker), or a mix. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
 
 ## Claude Code skills
 

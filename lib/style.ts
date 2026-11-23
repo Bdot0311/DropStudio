@@ -18,6 +18,7 @@ export function writeStyle(projectId: string, style: Partial<StyleConfig>): Styl
   next.hueShift = Math.round(Number(next.hueShift) % 360);
   next.editStyle = next.editStyle === "capcut" ? "capcut" : "clean";
   next.letterbox = !!next.letterbox;
+  if (!["preset", "whip", "zoom", "mix"].includes(next.transitionMode)) next.transitionMode = "preset";
   if (!["slam", "glitch", "karaoke", "neon", "gradient", "decode"].includes(next.captionStyle)) next.captionStyle = "slam";
   const c = { ...DEFAULT_STYLE.captions, ...(next.captions ?? {}) };
   next.captions = { hook: String(c.hook).slice(0, 80), drop: String(c.drop).slice(0, 40), cta: String(c.cta).slice(0, 40) };

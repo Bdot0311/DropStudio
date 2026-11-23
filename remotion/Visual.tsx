@@ -5,6 +5,7 @@ import { ShaderCanvas, type Uniforms } from "./gl/ShaderCanvas";
 import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, sectionAt } from "./lib/music";
 import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline";
 import type { VideoProps } from "./types";
+import { whipPan, zoomThrough } from "./transitions";
 import { Captions, LightLeak, Letterbox, RgbSplitFilter, capcutCamera, clapSplit, isCapcut, velocityOffset } from "./EditFx";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -73,7 +74,9 @@ export function Visual(props: Props) {
   // --- transitions ---
   const layers: React.ReactNode[] = [];
   let flash = 0;
+  let transRgb = 0;
   const showPrev = prev && p < 1;
+  const accentCss = `rgb(${colors[3].map((c) => Math.round(255 * c)).join(",")})`;
   switch (cur.transition) {
     case "crossfade":
       if (showPrev) layers.push(layer(prev!, {}));
@@ -93,6 +96,22 @@ export function Visual(props: Props) {
       layers.push(layer(cur, { transform: `scale(${0.7 + 0.3 * p})` }));
       if (showPrev) layers.push(layer(prev!, { transform: `scale(${1 + p * 2.5})`, opacity: 1 - p }));
       break;
+    case "whip_pan": {
+      const dir: 1 | -1 = cur.index % 2 ? 1 : -1;
+      const w = whipPan(p, dir, width, accentCss, `whip-${props.slotPrefix ?? "m"}`);
+      if (showPrev) layers.push(layer(prev!, w.prevStyle));
+      layers.push(layer(cur, showPrev ? w.curStyle : {}));
+      if (showPrev) layers.push(w.extras);
+      break;
+    }
+    case "zoom_through": {
+      const z = zoomThrough(p, cur.transitionSeconds, width, `zt-${props.slotPrefix ?? "m"}`);
+      if (showPrev) layers.push(layer(prev!, z.prevStyle));
+      layers.push(layer(cur, showPrev ? z.curStyle : {}));
+      if (showPrev && z.extras) layers.push(z.extras);
+      if (showPrev) transRgb = Math.abs(z.rgb);
+      break;
+    }
     case "glitch": {
       const jitter = showPrev && frame % 3 !== 0;
       if (jitter) layers.push(layer(prev!, { transform: `translateX(${(rand(frame) - 0.5) * 6}%)`, filter: "hue-rotate(90deg) saturate(2)" }));
@@ -118,7 +137,7 @@ export function Visual(props: Props) {
   const usesClip = !!cur.clip || (prev?.clip && p < 1);
   const cam = capcut ? capcutCamera(map, t, frame, k, sec.type) : null;
   const rgbId = `rgb-${props.slotPrefix ?? "m"}`;
-  const rgb = capcut ? clapSplit(map.claps, t, width, (cam?.strobe ?? 0) * 0.6 + (cam?.slam ?? 0)) : 0;
+  const rgb = Math.max(transRgb, capcut ? clapSplit(map.claps, t, width, (cam?.strobe ?? 0) * 0.6 + (cam?.slam ?? 0)) : 0);
   const stackTransform = cam ? `${cam.transform} scale(${zoom})` : `translate(${sx}%, ${sy}%) scale(${zoom})`;
   const stackFilter = `${rgb > 0 ? `url(#${rgbId}) ` : ""}${grade}${cam && cam.blur > 0.05 ? ` blur(${cam.blur.toFixed(2)}px)` : ""}`;
   if (cam) flash = Math.min(1, flash + cam.strobe + cam.slam * 0.5);
