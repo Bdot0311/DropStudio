@@ -14,6 +14,7 @@ import { useProject } from "@/hooks/use-project";
 import { PRESETS } from "@/lib/presets";
 import { DEFAULT_STYLE, type StyleConfig } from "@/lib/presets/configs";
 import { api, cn, fetcher } from "@/lib/utils";
+import { CAPTION_STYLES, CAPTION_STYLE_LABELS } from "@/remotion/captionStyles";
 import type { RenderMode } from "@/lib/types";
 
 const MODES: { id: RenderMode; name: string; desc: string }[] = [
@@ -141,8 +142,18 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
             </div>
             {style.editStyle === "capcut" && (
               <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Caption style</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {CAPTION_STYLES.map((c) => (
+                      <button key={c} onClick={() => set("captionStyle", c)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.captionStyle === c ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>
+                        {CAPTION_STYLE_LABELS[c]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <TextField label="Hook (pops in word by word at the start)" placeholder={`${proj?.project.artist || "Artist"} – ${proj?.project.title || "Title"}`} value={style.captions.hook} onChange={(v) => set("captions", { ...style.captions, hook: v })} />
-                <TextField label="Drop text (slams in on the drop, after a 3·2·1)" placeholder="e.g. LET'S GO (empty = countdown only)" value={style.captions.drop} onChange={(v) => set("captions", { ...style.captions, drop: v })} />
+                <TextField label="Drop text (letters fly together on the drop, after a 3·2·1)" placeholder="e.g. LET'S GO (empty = countdown only)" value={style.captions.drop} onChange={(v) => set("captions", { ...style.captions, drop: v })} />
                 <TextField label="End card" placeholder="OUT NOW" value={style.captions.cta} onChange={(v) => set("captions", { ...style.captions, cta: v })} />
               </div>
             )}

@@ -39,6 +39,19 @@ npm run setup -- --with-allin1   # allin1 analyzer (experimental on Mac; the bui
 
 Every preset (melodic house/techno, tech house, techno, future rave) sets scenes, cut rhythm, transitions, the reactive mapping, typography and AI prompt templates. See `lib/presets/configs.ts`.
 
+## Edit styles and captions
+
+On the **Style** page, **Edit style → CapCut** adds:
+- velocity surges on every beat, zoom punches and twists;
+- strobes that speed up into the drop, then a slam with shake;
+- RGB split on claps and light leaks at section changes.
+
+It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
+
+## Claude Code skills
+
+`.claude/skills/` holds the vendored HyperFrames skills plus `dropstudio-effects`, which explains how to port more effects into the renderer. See `.claude/skills/README.md`.
+
 ## AI providers and money
 
 - **Pick a provider in Settings.** The free **Test provider** makes placeholder footage, so you can try the whole flow without paying. For real footage, add a **fal.ai** key (recommended), a **Replicate** token, or point at a local **ComfyUI**.

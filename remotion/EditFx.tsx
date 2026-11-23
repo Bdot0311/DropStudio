@@ -6,14 +6,11 @@ import { AbsoluteFill, useVideoConfig } from "remotion";
 import type { PresetConfig, StyleConfig } from "../lib/presets/configs";
 import { beatInfo, lastIndexAtOrBefore, rand } from "./lib/music";
 import type { LiteMap, VideoProps } from "./types";
+import { CAPTION_STYLES, CharSlam, StyledCaption, backOut, type CaptionStyle } from "./captionStyles";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
-const backOut = (x: number) => {
-  const c = 1.9;
-  const y = clamp01(x) - 1;
-  return 1 + (c + 1) * y * y * y + c * y * y;
-};
+
 
 export const isCapcut = (s: StyleConfig) => s.editStyle === "capcut";
 
@@ -138,47 +135,22 @@ export function Letterbox() {
   );
 }
 
-/** Big bold white text with a black outline: the TikTok / CapCut caption look. */
-function CaptionText({ text, size, scale = 1, opacity = 1, rotate = 0 }: { text: string; size: number; scale?: number; opacity?: number; rotate?: number }) {
-  return (
-    <div
-      style={{
-        fontFamily: "'Montserrat', 'Arial Black', 'Helvetica Neue', Arial, sans-serif",
-        fontWeight: 900,
-        fontSize: size,
-        lineHeight: 1.05,
-        color: "#fff",
-        textTransform: "uppercase",
-        textAlign: "center",
-        letterSpacing: "0.01em",
-        WebkitTextStroke: `${Math.max(2, size * 0.07)}px #000`,
-        paintOrder: "stroke fill",
-        textShadow: `0 ${size * 0.06}px ${size * 0.25}px rgba(0,0,0,0.55)`,
-        transform: `scale(${scale}) rotate(${rotate}deg)`,
-        opacity,
-        maxWidth: "90%",
-        wordBreak: "break-word",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
 /**
  * Captions relative to this video's own window (works for full renders and social cuts):
  *   hook   – words pop in one per beat at the start
- *   3·2·1  – countdown on the last 3 beats before the drop, then the drop text slams in
+ *   3·2·1  – countdown on the last 3 beats before the drop, then the drop text slams together
  *   CTA    – end card in the last 2 bars
+ * Look comes from style.captionStyle (ported HyperFrames caption styles).
  */
-export function Captions(props: VideoProps & { t: number; presetCfg: PresetConfig }) {
-  const { map, t, style, startTime, duration, title, artist } = props;
+export function Captions(props: VideoProps & { t: number; frame: number; presetCfg: PresetConfig; colors: number[][] }) {
+  const { map, t, frame, style, startTime, duration, title, artist, colors } = props;
   const { width, height } = useVideoConfig();
   const base = Math.min(width, height);
   const vertical = height > width;
   const period = 60 / map.bpm;
   const bar = period * 4;
   const caps = style.captions;
+  const variant: CaptionStyle = (CAPTION_STYLES as readonly string[]).includes(style.captionStyle) ? (style.captionStyle as CaptionStyle) : "slam";
   const end = startTime + duration;
   const nodes: React.ReactNode[] = [];
   const top = vertical ? "28%" : "50%";
@@ -195,15 +167,31 @@ export function Captions(props: VideoProps & { t: number; presetCfg: PresetConfi
     const words = hook.split(/\s+/);
     const firstBeat = map.beats[Math.max(0, lastIndexAtOrBefore(map.beats, startTime))] ?? startTime;
     const beatsIn = Math.floor((t - firstBeat) / period + 1e-6);
-    const shown = Math.min(words.length, Math.max(1, beatsIn + 1));
     const sinceBeat = (t - firstBeat) / period - beatsIn;
     const fadeOut = clamp01((hookEnd - t) / (period * 0.5));
+    // Karaoke shows every word up front and highlights the current one; the rest pop in per beat.
+    const shown = variant === "karaoke" ? words.length : Math.min(words.length, Math.max(1, beatsIn + 1));
+    const size = base * (vertical ? 0.085 : 0.075);
     nodes.push(
       <AbsoluteFill key="hook" style={{ alignItems: "center", justifyContent: "flex-start", paddingTop: top }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: `0 ${base * 0.025}px`, maxWidth: "88%", opacity: fadeOut, transform: "translateY(-50%)" }}>
-          {words.slice(0, shown).map((w, i) => (
-            <CaptionText key={i} text={w} size={base * (vertical ? 0.085 : 0.075)} scale={i === shown - 1 && beatsIn < words.length ? backOut(sinceBeat * 5) : 1} />
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: `${base * 0.012}px ${base * 0.022}px`, maxWidth: "88%", opacity: fadeOut, transform: "translateY(-50%)" }}>
+          {words.slice(0, shown).map((w, i) => {
+            const isNew = i === Math.min(beatsIn, words.length - 1);
+            const enter = i < beatsIn ? 1 : clamp01(sinceBeat * 2.5);
+            return (
+              <StyledCaption
+                key={i}
+                text={w}
+                size={size}
+                variant={variant}
+                enter={enter}
+                frame={frame}
+                colors={colors}
+                active={variant === "karaoke" && isNew}
+                scale={variant === "karaoke" ? (isNew ? 1 + 0.08 * (1 - sinceBeat) : 1) : isNew && beatsIn < words.length ? backOut(sinceBeat * 5) : 1}
+              />
+            );
+          })}
         </div>
       </AbsoluteFill>
     );
@@ -217,14 +205,14 @@ export function Captions(props: VideoProps & { t: number; presetCfg: PresetConfi
       const into = 1 - (dt / period - (n - 1)); // 0→1 within that beat
       nodes.push(
         <AbsoluteFill key="cd" style={{ alignItems: "center", justifyContent: "center" }}>
-          <CaptionText text={String(n)} size={base * 0.28} scale={backOut(into * 4) * (1 + 0.1 * (3 - n))} opacity={clamp01((1 - into) * 3)} />
+          <StyledCaption text={String(n)} size={base * 0.28} variant={variant === "karaoke" ? "slam" : variant} enter={clamp01(into * 3)} frame={frame} colors={colors} scale={backOut(into * 4) * (1 + 0.1 * (3 - n))} opacity={clamp01((1 - into) * 3)} />
         </AbsoluteFill>
       );
     } else if (caps.drop && dt <= 0 && -dt < bar) {
       const q = -dt / bar;
       nodes.push(
-        <AbsoluteFill key="drop" style={{ alignItems: "center", justifyContent: "center" }}>
-          <CaptionText text={caps.drop} size={base * 0.13} scale={1 + 0.6 * Math.pow(1 - clamp01(q * 6), 3)} opacity={clamp01((1 - q) * 3)} rotate={-4} />
+        <AbsoluteFill key="drop" style={{ alignItems: "center", justifyContent: "center", opacity: clamp01((1 - q) * 3), transform: "rotate(-4deg)" }}>
+          <CharSlam text={caps.drop} size={base * 0.13} t={-dt} variant={variant} frame={frame} colors={colors} />
         </AbsoluteFill>
       );
     }
@@ -235,7 +223,7 @@ export function Captions(props: VideoProps & { t: number; presetCfg: PresetConfi
     const q = clamp01((t - (end - 2 * bar)) / period);
     nodes.push(
       <AbsoluteFill key="cta" style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", gap: base * 0.02, background: `rgba(0,0,0,${0.35 * q})` }}>
-        <CaptionText text={caps.cta} size={base * 0.11} scale={backOut(q)} />
+        <StyledCaption text={caps.cta} size={base * 0.11} variant={variant} enter={q} frame={frame} colors={colors} scale={variant === "gradient" ? 1 : backOut(q)} />
         <div style={{ opacity: q, color: "white", fontFamily: props.presetCfg.typography.family, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", fontSize: base * 0.035, textShadow: "0 2px 12px rgba(0,0,0,0.7)", textAlign: "center" }}>
           {artist} · {title}
         </div>

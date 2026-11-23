@@ -137,7 +137,7 @@ export function Visual(props: Props) {
         <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
       )}
       {style.letterbox && <Letterbox />}
-      {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} />}
+      {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} colors={colors} />}
       {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
     </AbsoluteFill>
   );
