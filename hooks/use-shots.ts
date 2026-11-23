@@ -6,9 +6,12 @@ import type { Shot } from "@/lib/shots";
 
 export type ShotsPayload = {
   shots: Shot[];
+  needKeyframes: number;
+  otherProviderKeyframes: number;
   spent: number;
   cap: number;
   provider: { id: string; label: string };
+  keys: { fal: boolean; replicate: boolean };
   prices: {
     image: { model: string; unit: number };
     draft: { model: string; unit: number; seconds: number };

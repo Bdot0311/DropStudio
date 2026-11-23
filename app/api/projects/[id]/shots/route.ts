@@ -1,7 +1,8 @@
-import { addShot, buildStoryboard, listShots } from "@/lib/shots";
+import { addShot, buildStoryboard, listShots, needsKeyframe } from "@/lib/shots";
 import { budgetCap, projectSpend } from "@/lib/spend";
 import { readModels, selectedModels, imageCost, clipCost } from "@/lib/models";
 import { getProject } from "@/lib/projects";
+import { getSetting } from "@/lib/settings";
 import { activeJob, latestJob } from "@/lib/jobs";
 import { error, json, readJson } from "@/lib/http";
 
@@ -12,11 +13,15 @@ export async function GET(_req: Request, { params }: Ctx) {
   const { id } = await params;
   if (!getProject(id)) return error("Project not found", 404);
   const m = selectedModels();
+  const shots = listShots(id);
   return json({
-    shots: listShots(id),
+    shots,
+    needKeyframes: shots.filter((s) => needsKeyframe(s, m.provider)).length,
+    otherProviderKeyframes: shots.filter((s) => s.keyframe && needsKeyframe(s, m.provider)).length,
     spent: projectSpend(id),
     cap: budgetCap(),
     provider: { id: m.provider, label: readModels().providers[m.provider].label },
+    keys: { fal: !!getSetting("fal_key"), replicate: !!getSetting("replicate_token") },
     prices: {
       image: { model: m.image.label, unit: imageCost(m.image) },
       draft: { model: m.draft.label, unit: clipCost(m.draft), seconds: m.draft.clip_seconds ?? 5 },

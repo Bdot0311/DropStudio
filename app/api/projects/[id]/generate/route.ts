@@ -1,5 +1,6 @@
 import { estimate, type Tier } from "@/lib/generation";
-import { getShot, listShots, updateShot, type Shot } from "@/lib/shots";
+import { getShot, listShots, needsKeyframe, updateShot, type Shot } from "@/lib/shots";
+import { activeProvider } from "@/lib/models";
 import { assertBudget, BudgetError, budgetCap, projectSpend } from "@/lib/spend";
 import { activeJob, enqueueJob } from "@/lib/jobs";
 import { error, json, readJson } from "@/lib/http";
@@ -18,7 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const all = listShots(id);
   let shots: Shot[];
   if (body.shotIds?.length) shots = body.shotIds.map(getShot).filter((s): s is Shot => !!s && s.project_id === id);
-  else if (kind === "keyframes") shots = all.filter((s) => !s.keyframe && s.status !== "rejected");
+  else if (kind === "keyframes") shots = all.filter((s) => needsKeyframe(s, activeProvider()));
   else shots = all.filter((s) => s.status === "approved");
   if (kind === "clips") shots = shots.filter((s) => s.keyframe);
   if (!shots.length) return error(kind === "keyframes" ? "No shots need keyframes." : "Approve some keyframes first: clips are only made from approved keyframes.", 409);

@@ -118,6 +118,10 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
   });
 
   if (status(job.id) === "cancelled") throw new Cancelled();
+  if (shots.length && failed === shots.length) {
+    const first = shots.map((s) => getShot(s.id)?.error).find(Boolean);
+    throw new Error(`All ${shots.length} ${label}s failed. ${first ?? ""}`.trim());
+  }
   return { generated: paid, cached: cachedHits, failed, spent_usd: +(paid * unit).toFixed(4), model: model.id, provider: m.provider };
 }
 

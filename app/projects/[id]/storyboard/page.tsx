@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CostMeter } from "@/components/ai/cost-meter";
+import { ProviderBanner } from "@/components/ai/provider-banner";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
 import { ShotCard } from "@/components/ai/shot-card";
 import { TimelineLane } from "@/components/ai/timeline-lane";
@@ -35,7 +36,7 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
 
   const shots = data.shots;
   const job = data.jobs.keyframes;
-  const needKeyframes = shots.filter((s) => !s.keyframe && s.status !== "rejected" && !/_(queued|running)$/.test(s.status)).length;
+  const needKeyframes = data.needKeyframes;
   const toReview = shots.filter((s) => s.status === "keyframe_ready");
   const approved = shots.filter((s) => s.status === "approved" || s.status.startsWith("clip_")).length;
 
@@ -60,6 +61,7 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
   return (
     <div className="space-y-4 p-5">
       <CostMeter spent={data.spent} cap={data.cap} provider={data.provider.label} />
+      <ProviderBanner provider={data.provider.id} keys={data.keys} onChange={() => mutate()} />
 
       {!shots.length ? (
         <Card>
@@ -76,6 +78,9 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
         <>
           <TimelineLane projectId={id} shots={shots} onAdd={async (i) => { await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "add", sectionIndex: i } }); mutate(); }} />
 
+          {data.otherProviderKeyframes > 0 && (
+            <p className="text-xs text-muted-foreground">{data.otherProviderKeyframes} keyframe{data.otherProviderKeyframes === 1 ? " was" : "s were"} made with another provider and will be regenerated with {data.provider.label}.</p>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => setConfirm(true)} disabled={!needKeyframes || jobActive(job)}>
               <Sparkles /> Generate {needKeyframes || ""} keyframe{needKeyframes === 1 ? "" : "s"}

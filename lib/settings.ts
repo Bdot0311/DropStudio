@@ -77,4 +77,12 @@ export function saveSettings(input: Record<string, unknown>): void {
     }
     stmt.run(key, value.trim());
   }
+  // Adding a real provider key while still on the free test provider switches to that provider,
+  // otherwise "generate" keeps making placeholder footage and nothing is sent to the API.
+  const provider = (db().prepare("SELECT value FROM settings WHERE key='default_provider'").get() as { value: string } | undefined)?.value ?? "mock";
+  if (provider === "mock" || provider === "none") {
+    const added = (k: string) => typeof input[k] === "string" && input[k] !== "" && input[k] !== "__clear__";
+    if (added("fal_key")) stmt.run("default_provider", "fal");
+    else if (added("replicate_token")) stmt.run("default_provider", "replicate");
+  }
 }

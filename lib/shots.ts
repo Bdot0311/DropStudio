@@ -108,3 +108,16 @@ export function listClipRefs(projectId: string) {
     .filter((s) => s.status === "clip_ready" && s.clip && fs.existsSync(path.join(DATA_DIR, s.clip)))
     .map((s) => ({ id: s.id, src: s.clip!, duration: s.clip_duration ?? 5, section: s.section_type }));
 }
+
+/** Which provider made a generated file ("cache/<key>.png|mp4"), from the generation cache. */
+export function fileProvider(rel: string | null): string | null {
+  if (!rel) return null;
+  const r = db().prepare("SELECT provider FROM gen_cache WHERE file=?").get(rel) as { provider: string } | undefined;
+  return r?.provider ?? null;
+}
+
+/** Shots whose keyframe is missing or was made by a different provider than the active one. */
+export function needsKeyframe(s: Shot, provider: string): boolean {
+  if (s.status === "rejected" || /_(queued|running)$/.test(s.status)) return false;
+  return !s.keyframe || (fileProvider(s.keyframe) ?? provider) !== provider;
+}

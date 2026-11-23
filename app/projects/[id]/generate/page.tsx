@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CostMeter } from "@/components/ai/cost-meter";
+import { ProviderBanner } from "@/components/ai/provider-banner";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
 import { STATUS_LABEL, ShotThumb } from "@/components/ai/shot-card";
 import { jobActive, useShots } from "@/hooks/use-shots";
@@ -31,6 +32,7 @@ export default function GenerateStep({ params }: { params: Promise<{ id: string 
   return (
     <div className="space-y-4 p-5">
       <CostMeter spent={data.spent} cap={data.cap} provider={data.provider.label} />
+      <ProviderBanner provider={data.provider.id} keys={data.keys} onChange={() => mutate()} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">
