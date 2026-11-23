@@ -169,6 +169,10 @@ export type StyleConfig = {
   captionStyle: "slam" | "glitch" | "karaoke" | "neon" | "gradient" | "decode";
   /** Cut transitions: the preset's own, or HyperFrames-style whip pan / zoom through / a mix of both. */
   transitionMode: "preset" | "whip" | "zoom" | "mix";
+  /** How the drop text arrives: letters fly together (char-slam-explode) or HyperFrames shutter-slam. */
+  dropAnimation: "explode" | "shutter";
+  /** HyperFrames light-sweep-pass: a light band crosses once per phrase, then a resting key light. */
+  lightSweep: boolean;
   letterbox: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
   captions: { hook: string; drop: string; cta: string };
@@ -176,5 +180,5 @@ export type StyleConfig = {
 
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
-  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
 };

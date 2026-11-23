@@ -154,6 +154,14 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
                 </div>
                 <TextField label="Hook (pops in word by word at the start)" placeholder={`${proj?.project.artist || "Artist"} – ${proj?.project.title || "Title"}`} value={style.captions.hook} onChange={(v) => set("captions", { ...style.captions, hook: v })} />
                 <TextField label="Drop text (letters fly together on the drop, after a 3·2·1)" placeholder="e.g. LET'S GO (empty = countdown only)" value={style.captions.drop} onChange={(v) => set("captions", { ...style.captions, drop: v })} />
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Drop text animation</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([["explode", "Letters fly together"], ["shutter", "Shutter slam (2 bars)"]] as const).map(([v, l]) => (
+                      <button key={v} onClick={() => set("dropAnimation", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.dropAnimation === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                    ))}
+                  </div>
+                </div>
                 <TextField label="End card" placeholder="OUT NOW" value={style.captions.cta} onChange={(v) => set("captions", { ...style.captions, cta: v })} />
               </div>
             )}
@@ -166,6 +174,7 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
               </div>
               <p className="text-[11px] text-muted-foreground">Whip pan: one-beat lateral whip with motion blur. Zoom through: two-beat push with a light sweep and RGB flicker. The drop keeps its own entrance.</p>
             </div>
+            <Toggle id="sweep" label="Light sweep every phrase (HyperFrames)" checked={style.lightSweep} onChange={(v) => set("lightSweep", v)} />
             <Toggle id="letterbox" label="Cinematic letterbox bars (16:9 only)" checked={style.letterbox} onChange={(v) => set("letterbox", v)} />
           </CardContent>
         </Card>

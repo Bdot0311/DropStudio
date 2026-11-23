@@ -6,6 +6,7 @@ import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, section
 import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline";
 import type { VideoProps } from "./types";
 import { whipPan, zoomThrough } from "./transitions";
+import { LightSweep } from "./fxPorts";
 import { Captions, LightLeak, Letterbox, RgbSplitFilter, capcutCamera, clapSplit, isCapcut, velocityOffset } from "./EditFx";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -151,6 +152,7 @@ export function Visual(props: Props) {
       </AbsoluteFill>
       {props.style.useCover && props.coverSrc && <CoverLayer src={props.coverSrc} map={map} t={t} kick={kick} bass={bass} preset={preset} />}
       {capcut && <LightLeak map={map} t={t} colors={colors} />}
+      {style.lightSweep && <LightSweep map={map} t={t} width={width} colors={colors} />}
       {!capcut && <TitleLayer {...props} presetCfg={preset} />}
       {(flash > 0 || kickFlash > 0.01) && (
         <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />

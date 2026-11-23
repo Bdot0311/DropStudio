@@ -6,6 +6,7 @@ import { AbsoluteFill, useVideoConfig } from "remotion";
 import type { PresetConfig, StyleConfig } from "../lib/presets/configs";
 import { beatInfo, lastIndexAtOrBefore, rand } from "./lib/music";
 import type { LiteMap, VideoProps } from "./types";
+import { ShutterSlam, shutterSeconds } from "./fxPorts";
 import { CAPTION_STYLES, CharSlam, StyledCaption, backOut, type CaptionStyle } from "./captionStyles";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -144,7 +145,7 @@ export function Letterbox() {
  */
 export function Captions(props: VideoProps & { t: number; frame: number; presetCfg: PresetConfig; colors: number[][] }) {
   const { map, t, frame, style, startTime, duration, title, artist, colors } = props;
-  const { width, height } = useVideoConfig();
+  const { width, height, fps } = useVideoConfig();
   const base = Math.min(width, height);
   const vertical = height > width;
   const period = 60 / map.bpm;
@@ -208,7 +209,15 @@ export function Captions(props: VideoProps & { t: number; frame: number; presetC
           <StyledCaption text={String(n)} size={base * 0.28} variant={variant === "karaoke" ? "slam" : variant} enter={clamp01(into * 3)} frame={frame} colors={colors} scale={backOut(into * 4) * (1 + 0.1 * (3 - n))} opacity={clamp01((1 - into) * 3)} />
         </AbsoluteFill>
       );
-    } else if (caps.drop && dt <= 0 && -dt < bar) {
+    } else if (caps.drop && dt <= 0 && style.dropAnimation === "shutter" && -dt < shutterSeconds(period) + period) {
+      // HyperFrames shutter-slam: six beat-locked moves under motion blur, then a beat of hold.
+      const hold = -dt - shutterSeconds(period);
+      nodes.push(
+        <AbsoluteFill key="drop" style={{ opacity: hold > 0 ? clamp01(1 - hold / period) : 1 }}>
+          <ShutterSlam text={caps.drop} size={base * 0.13} tau={-dt} period={period} fps={fps} width={width} height={height} variant={variant} frame={frame} colors={colors} />
+        </AbsoluteFill>
+      );
+    } else if (caps.drop && dt <= 0 && style.dropAnimation !== "shutter" && -dt < bar) {
       const q = -dt / bar;
       nodes.push(
         <AbsoluteFill key="drop" style={{ alignItems: "center", justifyContent: "center", opacity: clamp01((1 - q) * 3), transform: "rotate(-4deg)" }}>
