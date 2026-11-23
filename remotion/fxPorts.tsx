@@ -143,3 +143,156 @@ export function LightSweep({ map, t, width, colors }: { map: LiteMap; t: number;
     </>
   );
 }
+
+// ---------------------------------------------------------------- camera shake
+// HyperFrames camera-shake: measured profiles, three octaves of value noise per rotation axis
+// (amplitude in degrees, frequency in Hz), projected through a 28/50/85 mm lens. The handheld
+// profiles are rotation only; the 6D rig adds position channels.
+
+type Ch = [number, number] | null;
+type PosCh = [number, number, number];
+type ShakeProfile = { lens: "wide" | "normal" | "tele"; rot: Ch[][]; pos?: PosCh[][] };
+
+export const SHAKE_PROFILES: Record<string, ShakeProfile> = {
+  "handheld-normal-mild": { lens: "normal", rot: [[[7, 0.15], [5, 0.1], null], [[4, 0.8], [2, 0.75], null], [[1, 1.2], [0.8, 1.5], null]] },
+  "handheld-normal-strong": { lens: "normal", rot: [[[10, 0.4], [10, 0.06], null], [[5, 1.44], [3, 0.73], null], [[3, 2.49], [1, 2.0], null]] },
+  "handheld-normal-extreme": { lens: "normal", rot: [[[15, 0.2], [7, 0.25], null], [[5, 0.9], [3, 1.0], null], [[2, 2.0], null, null]] },
+  "handheld-wideangle-mild": { lens: "wide", rot: [[[12, 0.15], [5, 0.1], null], [[5, 0.6], [4, 0.45], null], [[1, 1.5], [1, 1.2], null]] },
+  "handheld-wideangle-strong": { lens: "wide", rot: [[[17.46, 0.5], [5, 0.25], null], [[12.47, 0.94], [4, 0.5], [1, 0.4]], [[4, 1.2], [2, 1.3], null]] },
+  "handheld-tele-mild": { lens: "tele", rot: [[[4, 0.2], [2, 0.15], null], [[2, 0.4], [2, 0.5], null], [[1, 0.7], [1, 0.6], null]] },
+  "handheld-tele-strong": { lens: "tele", rot: [[[6.19, 0.39], [4, 0.15], [1, 0.1]], [[1.84, 1.75], [0.5, 0.9], null], [[2.3, 2.0], [0.5, 1.4], null]] },
+  "rig-6d-shake": {
+    lens: "normal",
+    rot: [[[0.09, 5.83], [0.059, 1.8], [0.017, 2.38]], [[0.14, 9.17], [0.041, 11.35], [0.009, 10.52]], [[0.15, 57.17], [0.048, 54.17], [0.016, 63.76]]],
+    pos: [[[0.011, 3.2, 1], [0.059, 1.9, 1], [0.021, 3.33, 1]], [[0.009, 7.7, 1], [0.04, 9.1, 0], [0.009, 9.22, 1]], [[0.002, 51.51, 1], [0.05, 55.54, 1], [0.017, 58.55, 1]]],
+  },
+  "rig-6d-wobble": { lens: "normal", rot: [[[0.987, 5.2], [1.34, 5.39], [2, 2.23]], [[0.73, 9.17], [0.86, 11.35], [0.51, 8.31]], [[0.78, 13.52], [0.55, 27.66], [0.28, 18.91]]] },
+};
+
+export const SHAKE_LABELS: Record<string, string> = {
+  off: "Off",
+  "handheld-normal-mild": "Handheld",
+  "handheld-normal-strong": "Handheld strong",
+  "handheld-wideangle-strong": "Wide-angle run",
+  "handheld-tele-mild": "Telephoto",
+  "rig-6d-wobble": "Rig wobble",
+};
+
+const LENS_MM = { wide: 28, normal: 50, tele: 85 } as const;
+/** HyperFrames' amplitudes are for whole-scene camera moves; full-frame music visuals read better at 35%
+ *  (keeps the required overscan near 10%, so little of the picture is cropped). */
+const AMP = 0.35;
+
+function csHash(i: number, seed: number) {
+  let h = Math.imul(i | 0, 374761393) + Math.imul(seed | 0, 668265263);
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function csNoise(x: number, seed: number) {
+  const i = Math.floor(x);
+  const f = x - i;
+  const u = f * f * f * (f * (f * 6 - 15) + 10);
+  return csHash(i, seed) * (1 - u) + csHash(i + 1, seed) * u;
+}
+function csChannel(amp: number, freq: number, t: number, seed: number, constant: number) {
+  const u = freq * t + seed * 7.13;
+  if (constant) return Math.cos(u * 2 * Math.PI) * amp * 0.5;
+  return (csNoise(u, seed) - 0.5) * amp;
+}
+
+/**
+ * Camera transform at time t. `intensity` scales amplitude (we drive it from the music's loudness).
+ * A constant overscan (from the profile's worst case at `maxIntensity`) keeps the frame covered.
+ */
+export function cameraShake(profileId: string, t: number, width: number, height: number, intensityIn: number, maxIntensityIn: number): string {
+  const p = SHAKE_PROFILES[profileId];
+  const intensity = intensityIn * AMP;
+  const maxIntensity = maxIntensityIn * AMP;
+  if (!p) return "";
+  const RAD = Math.PI / 180;
+  const rot = [0, 0, 0], pos = [0, 0, 0];
+  p.rot.forEach((oct, o) => oct.forEach((ch, a) => { if (ch) rot[a] += csChannel(ch[0] * intensity, ch[1], t, o * 3 + a, 0); }));
+  p.pos?.forEach((oct, o) => oct.forEach((ch, a) => { pos[a] += csChannel(ch[0] * intensity, ch[1], t, 32 + o * 3 + a, ch[2]); }));
+  const D = (height / 2 / Math.tan(30 * RAD)) * (LENS_MM[p.lens] / 50);
+  const unit = 240 * (height / 1080);
+  const x = -D * Math.tan(rot[1] * RAD) + pos[0] * unit;
+  const y = D * Math.tan(rot[0] * RAD) + pos[1] * unit;
+  const roll = rot[2];
+  const dolly = 1 + (pos[2] * unit) / D;
+  // Worst case per axis: each noise channel spans ±amp/2.
+  const worst = [0, 0, 0];
+  p.rot.forEach((oct) => oct.forEach((ch, a) => { if (ch) worst[a] += (ch[0] * maxIntensity) / 2; }));
+  const mx = D * Math.tan(Math.min(60, worst[1]) * RAD) + (p.pos ? unit * 0.1 : 0);
+  const my = D * Math.tan(Math.min(60, worst[0]) * RAD) + (p.pos ? unit * 0.1 : 0);
+  const rr = worst[2] * RAD;
+  const overscan = Math.max(
+    1 + (2 * mx) / width,
+    1 + (2 * my) / height,
+    (width * Math.cos(rr) + height * Math.sin(rr)) / width,
+    (height * Math.cos(rr) + width * Math.sin(rr)) / height
+  );
+  return `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${roll.toFixed(3)}deg) scale(${(overscan * dolly).toFixed(4)})`;
+}
+
+// ---------------------------------------------------------------- beat accent
+// HyperFrames beat-accent: on a hit, the subject snaps up in scale (expo.out 0.12 s to 1+0.18·I, then
+// power3.out 0.28 s back), a radial flash erupts (expo.out 0.08 s to scale 0.78+0.3·I, opacity
+// 0.5+0.23·I, then power3.out 0.28 s to 1.08+0.32·I and 0) and the stage jolts
+// (+0.9 / -0.63 / +0.27 % of width, -0.34 / +0.26 / -0.12 % of height, then settles in 0.12 s).
+
+const expoOut = (x: number) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp01(x)));
+const power3Out = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
+
+/** Hit times for the accent: the start of every drop, or every downbeat inside drops. */
+export function accentHits(map: LiteMap, mode: "drops" | "bars"): number[] {
+  const drops = map.sections.filter((s) => s.type === "drop");
+  if (mode === "drops") return drops.map((s) => s.start);
+  return map.downbeats.filter((d) => drops.some((s) => d >= s.start - 1e-3 && d < s.end - 1e-3));
+}
+
+export function beatAccentAt(hits: number[], t: number, intensity: number) {
+  let h = -1;
+  for (let i = hits.length - 1; i >= 0; i--) if (hits[i] <= t + 1e-4) { h = hits[i]; break; }
+  const tau = h < 0 ? 9 : t - h;
+  if (tau > 0.45) return null;
+  const I = intensity;
+  const peak = 1 + 0.18 * I;
+  const scale = tau < 0.12 ? 1 + (peak - 1) * expoOut(tau / 0.12) : peak + (1 - peak) * power3Out((tau - 0.12) / 0.28);
+  let fs: number, fo: number;
+  const fPeakS = 0.78 + 0.3 * I, fEndS = 1.08 + 0.32 * I, fPeakO = Math.min(0.96, 0.5 + 0.23 * I);
+  if (tau < 0.08) { const e = expoOut(tau / 0.08); fs = 0.25 + (fPeakS - 0.25) * e; fo = fPeakO * e; }
+  else { const e = power3Out((tau - 0.08) / 0.28); fs = fPeakS + (fEndS - fPeakS) * e; fo = fPeakO * (1 - e); }
+  // Jolt keyframes (percent of width / height).
+  const kx = [0, 0.9, -0.63, 0.27, 0].map((v) => v * I), ky = [0, -0.34, 0.26, -0.12, 0].map((v) => v * I);
+  const kt = [0, 0.04, 0.09, 0.14, 0.26];
+  let sx = 0, sy = 0;
+  for (let i = 0; i < kt.length - 1; i++) {
+    if (tau >= kt[i] && tau < kt[i + 1]) {
+      const q = (tau - kt[i]) / (kt[i + 1] - kt[i]);
+      const e = i === kt.length - 2 ? power3Out(q) : q;
+      sx = kx[i] + (kx[i + 1] - kx[i]) * e;
+      sy = ky[i] + (ky[i + 1] - ky[i]) * e;
+    }
+  }
+  return { scale, flashScale: fs, flashOpacity: Math.max(0, fo), sx, sy };
+}
+
+export function AccentFlash({ scale, opacity, color }: { scale: number; opacity: number; color: string }) {
+  if (opacity < 0.005) return null;
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+      <div
+        style={{
+          width: "62vmax",
+          aspectRatio: "1",
+          borderRadius: "50%",
+          opacity,
+          transform: `scale(${scale})`,
+          mixBlendMode: "screen",
+          background: `radial-gradient(circle, rgba(${color},0.92) 0%, rgba(${color},0.54) 24%, rgba(${color},0.16) 48%, transparent 72%)`,
+        }}
+      />
+    </AbsoluteFill>
+  );
+}

@@ -173,6 +173,10 @@ export type StyleConfig = {
   dropAnimation: "explode" | "shutter";
   /** HyperFrames light-sweep-pass: a light band crosses once per phrase, then a resting key light. */
   lightSweep: boolean;
+  /** HyperFrames camera-shake profile ("off" or a profile id); strength follows the music. */
+  cameraShake: string;
+  /** HyperFrames beat-accent sting: off, on every drop, or on every bar inside drops. */
+  beatAccent: "off" | "drops" | "bars";
   letterbox: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
   captions: { hook: string; drop: string; cta: string };
@@ -180,5 +184,5 @@ export type StyleConfig = {
 
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
-  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, cameraShake: "off", beatAccent: "off", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
 };

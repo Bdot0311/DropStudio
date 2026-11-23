@@ -46,7 +46,7 @@ On the **Style** page, **Edit style → CapCut** adds:
 - strobes that speed up into the drop, then a slam with shake;
 - RGB split on claps and light leaks at section changes.
 
-It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Cut transitions can be switched to HyperFrames-style **whip pan** (one beat, motion blur) or **zoom through** (two beats, light sweep and RGB flicker), or a mix. The drop text can use HyperFrames' **shutter slam** (six beat-locked moves with real motion blur), and **light sweep** adds a key-light band across the frame every phrase. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
+It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Cut transitions can be switched to HyperFrames-style **whip pan** (one beat, motion blur) or **zoom through** (two beats, light sweep and RGB flicker), or a mix. The drop text can use HyperFrames' **shutter slam** (six beat-locked moves with real motion blur), and **light sweep** adds a key-light band across the frame every phrase. **Camera shake** uses HyperFrames' measured handheld/rig profiles (strength follows the music's loudness), and **beat accent** adds an impact flash, scale pulse and jolt on each drop or every bar of a drop. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
 
 ## Claude Code skills
 

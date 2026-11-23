@@ -14,7 +14,7 @@ Drop Studio renders with **Remotion** (React), not HyperFrames. The vendored `hy
 | Per-frame picture: layers, transitions, kick flash/zoom, grade | `remotion/Visual.tsx` |
 | CapCut edit style: velocity surges, beat punches, build-up strobe, drop slam, RGB split, light leaks, letterbox, kinetic captions | `remotion/EditFx.tsx` |
 | Caption looks (ported from HyperFrames: slam, glitch, karaoke, neon, gradient, decode, char-slam) | `remotion/captionStyles.tsx` |
-| Shutter slam (drop text) and light sweep, ported from HyperFrames | `remotion/fxPorts.tsx` |
+| Shutter slam (drop text), light sweep, camera shake and beat accent, ported from HyperFrames | `remotion/fxPorts.tsx` |
 | Cut transitions ported from HyperFrames (whip pan, zoom through) | `remotion/transitions.tsx` (used in `Visual.tsx`, chosen in `remotion/lib/timeline.ts`) |
 | Shader scenes (GLSL) | `remotion/gl/shaders.ts` |
 | Musical edit plan: where cuts land, which scene/clip, transitions | `remotion/lib/timeline.ts` |

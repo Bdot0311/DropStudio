@@ -15,6 +15,7 @@ import { PRESETS } from "@/lib/presets";
 import { DEFAULT_STYLE, type StyleConfig } from "@/lib/presets/configs";
 import { api, cn, fetcher } from "@/lib/utils";
 import { CAPTION_STYLES, CAPTION_STYLE_LABELS } from "@/remotion/captionStyles";
+import { SHAKE_LABELS } from "@/remotion/fxPorts";
 import type { RenderMode } from "@/lib/types";
 
 const MODES: { id: RenderMode; name: string; desc: string }[] = [
@@ -173,6 +174,22 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground">Whip pan: one-beat lateral whip with motion blur. Zoom through: two-beat push with a light sweep and RGB flicker. The drop keeps its own entrance.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Camera shake (HyperFrames profiles; follows the music&apos;s loudness)</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {Object.entries(SHAKE_LABELS).map(([v, l]) => (
+                  <button key={v} onClick={() => set("cameraShake", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.cameraShake === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Beat accent (impact flash, scale pulse and jolt)</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([["off", "Off"], ["drops", "On each drop"], ["bars", "Every bar in drops"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("beatAccent", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.beatAccent === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
             </div>
             <Toggle id="sweep" label="Light sweep every phrase (HyperFrames)" checked={style.lightSweep} onChange={(v) => set("lightSweep", v)} />
             <Toggle id="letterbox" label="Cinematic letterbox bars (16:9 only)" checked={style.letterbox} onChange={(v) => set("letterbox", v)} />
