@@ -5,6 +5,7 @@ import { ShaderCanvas, type Uniforms } from "./gl/ShaderCanvas";
 import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, sectionAt } from "./lib/music";
 import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline";
 import type { VideoProps } from "./types";
+import { Captions, LightLeak, Letterbox, RgbSplitFilter, capcutCamera, clapSplit, isCapcut, velocityOffset } from "./EditFx";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
@@ -17,6 +18,8 @@ type Props = VideoProps & {
   slotPrefix?: string;
   /** Shader resolution multiplier (previews can render at half resolution). */
   glScale?: number;
+  /** Loops and thumbnails never show captions. */
+  noCaptions?: boolean;
 };
 
 export function Visual(props: Props) {
@@ -41,9 +44,12 @@ export function Visual(props: Props) {
   const r = preset.reactive;
   const k = style.intensity;
   const section = map.sections[sectionAt(map, t)];
+  const capcut = isCapcut(style);
+  const vel = capcut ? 0.9 * Math.min(1.5, k) : 0;
+  const velNow = velocityOffset(map, t, vel);
 
   const baseU = (seg: Segment): Uniforms => ({
-    time: motionTime(map, t) * r.speed + seg.seed * 50,
+    time: (motionTime(map, t) + velNow) * r.speed + seg.seed * 50,
     beat: b.phase,
     kick: kick * Math.min(1.5, k),
     bass, low: envAt(map.env.low, fpsE, t), mid: envAt(map.env.mid, fpsE, t), high,
@@ -59,7 +65,7 @@ export function Visual(props: Props) {
 
   const layer = (seg: Segment, css: React.CSSProperties) =>
     seg.clip ? (
-      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={t - seg.start} fps={fps} style={css} />
+      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={t - seg.start + (vel ? velNow - velocityOffset(map, seg.start, vel) : 0)} fps={fps} style={css} />
     ) : (
       <ShaderCanvas key={slot(seg)} scene={seg.scene} u={baseU(seg)} width={glW} height={glH} style={css} />
     );
@@ -110,18 +116,28 @@ export function Visual(props: Props) {
     : "saturate(0.92)";
   const kickFlash = kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1);
   const usesClip = !!cur.clip || (prev?.clip && p < 1);
+  const cam = capcut ? capcutCamera(map, t, frame, k, sec.type) : null;
+  const rgbId = `rgb-${props.slotPrefix ?? "m"}`;
+  const rgb = capcut ? clapSplit(map.claps, t, width, (cam?.strobe ?? 0) * 0.6 + (cam?.slam ?? 0)) : 0;
+  const stackTransform = cam ? `${cam.transform} scale(${zoom})` : `translate(${sx}%, ${sy}%) scale(${zoom})`;
+  const stackFilter = `${rgb > 0 ? `url(#${rgbId}) ` : ""}${grade}${cam && cam.blur > 0.05 ? ` blur(${cam.blur.toFixed(2)}px)` : ""}`;
+  if (cam) flash = Math.min(1, flash + cam.strobe + cam.slam * 0.5);
 
   return (
     <AbsoluteFill style={{ background: preset.background, overflow: "hidden" }}>
-      <AbsoluteFill style={{ transform: `translate(${sx}%, ${sy}%) scale(${zoom})`, filter: grade }}>
+      {rgb > 0 && <RgbSplitFilter id={rgbId} dx={rgb} />}
+      <AbsoluteFill style={{ transform: stackTransform, filter: stackFilter }}>
         {layers}
         {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} />}
       </AbsoluteFill>
       {props.style.useCover && props.coverSrc && <CoverLayer src={props.coverSrc} map={map} t={t} kick={kick} bass={bass} preset={preset} />}
-      <TitleLayer {...props} presetCfg={preset} />
+      {capcut && <LightLeak map={map} t={t} colors={colors} />}
+      {!capcut && <TitleLayer {...props} presetCfg={preset} />}
       {(flash > 0 || kickFlash > 0.01) && (
         <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
       )}
+      {style.letterbox && <Letterbox />}
+      {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} />}
       {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
     </AbsoluteFill>
   );

@@ -2,7 +2,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { AlertTriangle, Check, Download, ExternalLink, Film, ImageIcon, Info, Loader2, Package, Repeat, RotateCcw, Save, Smartphone, Upload } from "lucide-react";
+import { AlertTriangle, Check, Download, ExternalLink, ImageIcon, Info, Loader2, Package, Repeat, RotateCcw, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,19 +10,18 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PreviewPlayer } from "@/components/video/preview-player";
 import { RenderJob } from "@/components/video/render-job";
-import { ShortsTrimmer } from "@/components/publish/shorts-trimmer";
+import { SocialCuts } from "@/components/publish/social-cuts";
 import { useVideoProps } from "@/hooks/use-video-props";
 import { useProject } from "@/hooks/use-project";
-import { biggestDropSection, suggestShortWindow } from "@/lib/publish";
-import { fmtTime } from "@/lib/grid";
+import { biggestDropSection } from "@/lib/publish";
 import { api, cn, fetcher } from "@/lib/utils";
 import type { Job } from "@/lib/types";
 import type { Metadata } from "@/lib/metadata";
 
 type PublishState = {
   jobs: Record<string, Job>;
+  cuts: { name: string; bytes: number; mtime: number }[];
   outputs: { main: boolean; short: boolean; loop: boolean; thumbnail: boolean };
   youtube: { configured: boolean; connected: boolean; channel: string };
 };
@@ -49,7 +48,7 @@ export default function PublishStep({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-5">
-      <ShortsCard id={id} props={props} peaks={peaks?.data} audioUrl={`/api/projects/${id}/files/${proj.project.playback_file}`} job={state.jobs.render_short} onRender={post} onChange={() => mutate()} />
+      <SocialCuts id={id} props={props} peaks={peaks?.data} audioUrl={`/api/projects/${id}/files/${proj.project.playback_file}`} jobs={state.jobs} cuts={state.cuts} onRender={post} onChange={() => mutate()} />
       <div className="grid gap-6 lg:grid-cols-2">
         <ThumbnailCard id={id} jobs={state.jobs} hasThumb={state.outputs.thumbnail} onAction={post} />
         <LoopCard id={id} bpm={props.map.bpm} drop={biggestDropSection(props.map).start} job={state.jobs.render_loop} onRender={post} onChange={() => mutate()} />
@@ -57,46 +56,6 @@ export default function PublishStep({ params }: { params: Promise<{ id: string }
       <MetadataCard id={id} />
       <ShipCard id={id} state={state} onAction={post} onChange={() => mutate()} />
     </div>
-  );
-}
-
-function ShortsCard({ id, props, peaks, audioUrl, job, onRender, onChange }: {
-  id: string; props: NonNullable<ReturnType<typeof useVideoProps>["data"]>; peaks?: number[]; audioUrl: string; job?: Job;
-  onRender: (b: object) => void; onChange: () => void;
-}) {
-  const map = props.map;
-  const suggested = useMemo(() => suggestShortWindow(map), [map]);
-  const [win, setWin] = useState(suggested);
-  const drop = biggestDropSection(map);
-  const len = win.end - win.start;
-  const lead = drop.start - win.start;
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base"><Smartphone className="h-4 w-4" /> YouTube Shorts / TikTok / Reels cut</CardTitle>
-        <CardDescription>1080×1920, auto-picked around your biggest drop (red line). Drag the window or its edges; it snaps to bars and stays 15–45 s.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {peaks && <ShortsTrimmer audioUrl={audioUrl} peaks={peaks} duration={map.duration} downbeats={map.downbeats} dropAt={drop.start} value={win} onChange={setWin} />}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <span className="font-mono">{fmtTime(win.start)} → {fmtTime(win.end)}</span>
-          <span className={cn(len < 15 || len > 45 ? "text-destructive" : "text-muted-foreground")}>{len.toFixed(1)} s</span>
-          <span className={cn(lead > 0 && win.end > drop.start ? "text-success" : "text-warning")}>
-            {lead > 0 && win.end > drop.start ? <><Check className="mr-1 inline h-3.5 w-3.5" />drop hits {lead.toFixed(1)} s in, on a cut</> : "the drop isn't inside this window"}
-          </span>
-          <Button size="sm" variant="ghost" onClick={() => setWin(suggested)}><RotateCcw /> Reset</Button>
-        </div>
-        <div className="grid gap-4 md:grid-cols-[240px_1fr]">
-          <PreviewPlayer props={props} startTime={win.start} duration={len} width={1080} height={1920} className="w-[240px]" />
-          <div className="space-y-3">
-            <Button onClick={() => onRender({ kind: "short", startTime: win.start, duration: len, width: 1080, height: 1920, fps: 30 })} disabled={active(job)}>
-              <Film /> {active(job) ? "Rendering…" : "Render Shorts cut"}
-            </Button>
-            <RenderJob job={job} projectId={id} onChange={onChange} vertical />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -230,6 +189,7 @@ function ShipCard({ id, state, onAction, onChange }: { id: string; state: Publis
         </CardHeader>
         <CardContent className="space-y-3">
           <ul className="space-y-1 text-sm">
+            {state.cuts.length > 1 && <li className="text-xs text-muted-foreground">+ {state.cuts.length} social cut{state.cuts.length === 1 ? "" : "s"} included</li>}
             {([["main", "Main video"], ["short", "Shorts cut"], ["thumbnail", "Thumbnail"], ["loop", "Loop (optional)"]] as const).map(([k, l]) => (
               <li key={k} className={cn("flex items-center gap-2", state.outputs[k] ? "text-foreground" : "text-muted-foreground")}>
                 {state.outputs[k] ? <Check className="h-4 w-4 text-success" /> : <span className="inline-block h-4 w-4 rounded-full border" />} {l}

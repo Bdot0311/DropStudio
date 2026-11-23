@@ -17,7 +17,8 @@ export async function handleExport(job: Job, ctx: Ctx) {
   const dir = projectFile(pid, "renders");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "metadata.txt"), metadataText(pid));
-  const files = ["main.mp4", "short.mp4", "thumbnail.jpg", "loop.mp4", "metadata.txt"].filter((f) => fs.existsSync(path.join(dir, f)));
+  const cuts = fs.readdirSync(dir).filter((f) => f.endsWith(".mp4") && !["main.mp4", "loop.mp4"].includes(f)).sort();
+  const files = ["main.mp4", ...cuts, "thumbnail.jpg", "loop.mp4", "metadata.txt"].filter((f) => fs.existsSync(path.join(dir, f)));
   if (!files.includes("main.mp4")) throw new Error("Render the main video first (Render step).");
   const name = `${slug(`${p.artist} ${p.title}`)}-youtube-package.zip`;
   const out = path.join(dir, name);

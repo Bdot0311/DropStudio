@@ -14,7 +14,7 @@ function demoMap(): LiteMap {
     duration, bpm, beats, downbeats,
     sections: [sec("intro", 0, 16, 0.4), sec("build", 16, 24, 0.6), sec("drop", 24, 40, 0.95), sec("breakdown", 40, 56, 0.2), sec("outro", 56, 64, 0.5)],
     env: { fps: 60, rms: ramp, low: ramp, mid: ramp, high: ramp, kick, bass: ramp, other: ramp },
-    kicks: beats, hats: [],
+    kicks: beats, hats: [], claps: [],
   };
 }
 

@@ -28,6 +28,7 @@ type RenderParams = {
   startTime?: number; // short / loop
   duration?: number; // short
   loopBars?: number; // loop
+  name?: string; // output file name for social cuts (renders/<name>.mp4)
 };
 
 const fmtEta = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`);
@@ -36,6 +37,7 @@ export async function handleRender(job: Job, ctx: Ctx) {
   const pid = job.project_id!;
   const p = job.params as RenderParams;
   const kind: RenderKind = p.kind ?? "main";
+  const outName = (p.name ?? kind).replace(/[^a-z0-9_-]/gi, "").slice(0, 60) || kind;
   const fps = p.fps ?? 30;
   const [width, height] = kind === "main" ? [p.width ?? 1920, p.height ?? 1080] : [p.width ?? 1080, p.height ?? 1920];
 
@@ -64,9 +66,9 @@ export async function handleRender(job: Job, ctx: Ctx) {
 
   // Same settings → same work folder, so a crashed or cancelled render resumes where it stopped.
   const hash = crypto.createHash("sha1").update(JSON.stringify({ props, compId, crf: p.crf ?? 18, serveUrl })).digest("hex").slice(0, 10);
-  const work = projectFile(pid, `renders/.work/${kind}-${hash}`);
+  const work = projectFile(pid, `renders/.work/${outName}-${hash}`);
   fs.mkdirSync(work, { recursive: true });
-  for (const d of fs.readdirSync(path.dirname(work))) if (d.startsWith(`${kind}-`) && d !== path.basename(work)) fs.rmSync(path.join(path.dirname(work), d), { recursive: true, force: true });
+  for (const d of fs.readdirSync(path.dirname(work))) if (d.startsWith(`${outName}-`) && d !== path.basename(work)) fs.rmSync(path.join(path.dirname(work), d), { recursive: true, force: true });
 
   const chunkFrames = fps * 20;
   const chunks: [number, number][] = [];
@@ -129,7 +131,7 @@ export async function handleRender(job: Job, ctx: Ctx) {
   await run("ffmpeg", ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", video]);
 
   fs.mkdirSync(projectFile(pid, "renders"), { recursive: true });
-  const outRel = `renders/${kind}.mp4`;
+  const outRel = `renders/${outName}.mp4`;
   const output = projectFile(pid, outRel);
   const tmpOut = output + ".tmp.mp4";
 
@@ -166,6 +168,7 @@ export async function handleRender(job: Job, ctx: Ctx) {
     bytes: fs.statSync(output).size,
     seconds: Math.round((Date.now() - startedAt) / 1000),
     startTime: props.startTime,
+    name: outName,
   };
 }
 

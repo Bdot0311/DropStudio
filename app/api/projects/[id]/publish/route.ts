@@ -16,17 +16,22 @@ export async function GET(_req: Request, { params }: Ctx) {
   if (!getProject(id)) return error("Project not found", 404);
   const latest: Record<string, Job> = {};
   for (const j of projectJobs(id, 200)) {
-    const p = j.params as { kind?: string; final?: boolean };
+    const p = j.params as { kind?: string; final?: boolean; name?: string };
     const key =
-      j.type === "render" ? `render_${p.kind ?? "main"}`
+      j.type === "render" ? `render_${p.name ?? p.kind ?? "main"}`
       : j.type === "thumbnails" ? (p.final ? "thumbnail_final" : "thumbnails")
       : j.type === "youtube_upload" ? `upload_${p.kind ?? "main"}`
       : j.type;
     if (!latest[key]) latest[key] = j;
   }
   const exists = (f: string) => fs.existsSync(projectFile(id, `renders/${f}`));
+  const dir = projectFile(id, "renders");
+  const cuts = fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter((f) => f.endsWith(".mp4") && f !== "main.mp4" && f !== "loop.mp4").map((f) => ({ name: f.replace(/\.mp4$/, ""), bytes: fs.statSync(`${dir}/${f}`).size, mtime: fs.statSync(`${dir}/${f}`).mtimeMs }))
+    : [];
   return json({
     jobs: latest,
+    cuts,
     outputs: { main: exists("main.mp4"), short: exists("short.mp4"), loop: exists("loop.mp4"), thumbnail: exists("thumbnail.jpg") },
     youtube: { configured: !!getSetting("youtube_client_id") && !!getSetting("youtube_client_secret"), connected: !!getSetting("youtube_refresh_token"), channel: getSetting("youtube_channel") },
   });

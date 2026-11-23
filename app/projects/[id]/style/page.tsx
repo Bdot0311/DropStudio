@@ -31,6 +31,7 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
   const [mode, setMode] = useState<RenderMode>("hybrid");
   const [preset, setPreset] = useState("melodic");
   const [saving, setSaving] = useState(false);
+  const [previewLen, setPreviewLen] = useState<"10" | "30" | "full">("10");
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -80,11 +81,15 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
     <div className="grid gap-5 p-5 xl:grid-cols-[1fr_380px]">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Live preview: 10 seconds around the biggest drop</h2>
+          <div className="flex items-center gap-1 rounded-md border p-0.5 text-xs">
+            {([["10", "Drop · 10 s"], ["30", "Drop · 30 s"], ["full", "Whole track"]] as const).map(([v, l]) => (
+              <button key={v} onClick={() => setPreviewLen(v)} className={cn("cursor-pointer rounded px-2.5 py-1", previewLen === v ? "bg-accent text-foreground" : "text-muted-foreground")}>{l}</button>
+            ))}
+          </div>
           <span className="text-xs text-muted-foreground">{saving ? <><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />Saving…</> : "All changes saved"}</span>
         </div>
         {live ? (
-          <PreviewPlayer props={live} startTime={previewStart} duration={10} loop className="w-full" />
+          <PreviewPlayer key={previewLen} props={live} startTime={previewLen === "full" ? 0 : previewStart} duration={previewLen === "full" ? undefined : Number(previewLen)} loop className="w-full" />
         ) : (
           <div className="grid aspect-video place-items-center rounded-lg border text-sm text-muted-foreground">Loading preview…</div>
         )}
@@ -122,6 +127,31 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
 
         <Card>
           <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Edit style</CardTitle>
+            <CardDescription className="text-xs">CapCut style adds velocity surges on every beat, zoom punches and twists, strobes that speed up into the drop, a slam on the drop, RGB split on claps, light leaks, and bold animated captions.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              {([["clean", "Clean", "Preset look only"], ["capcut", "CapCut", "Hype edit + captions"]] as const).map(([v, n, d]) => (
+                <button key={v} onClick={() => set("editStyle", v)} className={cn("cursor-pointer rounded-md border p-2.5 text-left", style.editStyle === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>
+                  <div className="text-sm font-medium">{n}</div>
+                  <div className="text-[11px] text-muted-foreground">{d}</div>
+                </button>
+              ))}
+            </div>
+            {style.editStyle === "capcut" && (
+              <div className="space-y-3">
+                <TextField label="Hook (pops in word by word at the start)" placeholder={`${proj?.project.artist || "Artist"} – ${proj?.project.title || "Title"}`} value={style.captions.hook} onChange={(v) => set("captions", { ...style.captions, hook: v })} />
+                <TextField label="Drop text (slams in on the drop, after a 3·2·1)" placeholder="e.g. LET'S GO (empty = countdown only)" value={style.captions.drop} onChange={(v) => set("captions", { ...style.captions, drop: v })} />
+                <TextField label="End card" placeholder="OUT NOW" value={style.captions.cta} onChange={(v) => set("captions", { ...style.captions, cta: v })} />
+              </div>
+            )}
+            <Toggle id="letterbox" label="Cinematic letterbox bars (16:9 only)" checked={style.letterbox} onChange={(v) => set("letterbox", v)} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
             <CardTitle className="text-sm">Feel</CardTitle>
             <CardDescription className="text-xs">Fine-tune the preset for this track.</CardDescription>
           </CardHeader>
@@ -129,7 +159,7 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
             <Slider label="Intensity" hint="How hard visuals react to the kick and bass" value={style.intensity} min={0} max={1.5} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set("intensity", v)} />
             <Slider label="Cut rhythm" hint="Slower ← cuts → faster" value={Math.log2(style.cutRate)} min={-1} max={1} step={1} fmt={(v) => (v === 0 ? "Preset" : v > 0 ? "2× faster" : "2× slower")} onChange={(v) => set("cutRate", Math.pow(2, v))} />
             <Slider label="Palette shift" hint="Rotates the preset's colours" value={style.hueShift} min={-180} max={180} step={5} fmt={(v) => `${v}°`} onChange={(v) => set("hueShift", v)} />
-            <Toggle id="title" label="Title card at the start" checked={style.titleCard} onChange={(v) => set("titleCard", v)} />
+            {style.editStyle !== "capcut" && <Toggle id="title" label="Title card at the start" checked={style.titleCard} onChange={(v) => set("titleCard", v)} />}
             <Toggle id="cover" label="Show cover art in intro & breakdown" checked={style.useCover} onChange={(v) => set("useCover", v)} />
             <Toggle id="debug" label="Debug overlay (beat & bar numbers)" checked={style.debug} onChange={(v) => set("debug", v)} />
           </CardContent>
@@ -154,6 +184,15 @@ function Slider({ label, hint, value, min, max, step, fmt, onChange }: { label: 
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[var(--color-primary)]" />
       <p className="text-[11px] text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function TextField({ label, placeholder, value, onChange }: { label: string; placeholder: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+      <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="flex h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
     </div>
   );
 }

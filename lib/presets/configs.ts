@@ -163,6 +163,14 @@ export type StyleConfig = {
   titleCard: boolean;
   useCover: boolean;
   debug: boolean; // beat/bar overlay for checking sync
+  /** "clean" = preset look only; "capcut" = velocity surges, beat punches, strobes, captions. */
+  editStyle: "clean" | "capcut";
+  letterbox: boolean;
+  /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
+  captions: { hook: string; drop: string; cta: string };
 };
 
-export const DEFAULT_STYLE: StyleConfig = { intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false };
+export const DEFAULT_STYLE: StyleConfig = {
+  intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
+  editStyle: "clean", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+};

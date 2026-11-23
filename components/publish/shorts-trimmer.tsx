@@ -4,17 +4,18 @@ import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin, { type Region } from "wavesurfer.js/plugins/regions";
 import { snap } from "@/lib/grid";
 
-/** Waveform with one draggable window for the Shorts cut; edges snap to bar lines, length kept within 15–45 s. */
+/** Waveform with one draggable window for a social cut; edges snap to bar lines, length kept within [minLen, maxLen]. */
 export function ShortsTrimmer({
-  audioUrl, peaks, duration, downbeats, dropAt, value, onChange,
+  audioUrl, peaks, duration, downbeats, dropAt, value, onChange, minLen = 15, maxLen = 45,
 }: {
   audioUrl: string; peaks: number[]; duration: number; downbeats: number[]; dropAt: number;
   value: { start: number; end: number }; onChange: (v: { start: number; end: number }) => void;
+  minLen?: number; maxLen?: number;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const region = useRef<Region | null>(null);
-  const latest = useRef({ value, onChange, downbeats });
-  latest.current = { value, onChange, downbeats };
+  const latest = useRef({ value, onChange, downbeats, minLen, maxLen });
+  latest.current = { value, onChange, downbeats, minLen, maxLen };
 
   useEffect(() => {
     if (!el.current) return;
@@ -29,12 +30,12 @@ export function ShortsTrimmer({
     marker.style.cssText = `position:absolute;top:0;bottom:0;left:${(dropAt / duration) * 100}%;width:2px;background:#f43f5e;z-index:3;pointer-events:none`;
     ws.getWrapper().appendChild(marker);
     regions.on("region-updated", (reg) => {
-      const { downbeats: db, onChange: cb } = latest.current;
-      let s = snap(db, reg.start);
+      const { downbeats: db, onChange: cb, minLen: lo, maxLen: hi } = latest.current;
+      const s = snap(db, reg.start);
       let e = snap(db, reg.end);
-      if (e - s < 15) e = snap(db, s + 15.5);
-      if (e - s > 45) e = snap(db, s + 44.5);
-      if (e - s > 45 || e - s < 15) e = s + Math.min(45, Math.max(15, e - s));
+      if (e - s < lo) e = snap(db, s + lo + 0.5);
+      if (e - s > hi) e = snap(db, s + hi - 0.5);
+      if (e - s > hi || e - s < lo) e = s + Math.min(hi, Math.max(lo, e - s));
       e = Math.min(e, duration);
       reg.setOptions({ start: s, end: e });
       cb({ start: s, end: e });

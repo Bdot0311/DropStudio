@@ -12,6 +12,7 @@ export type LiteMap = {
   env: { fps: number; rms: number[]; low: number[]; mid: number[]; high: number[]; kick: number[]; bass: number[]; other: number[] };
   kicks: number[];
   hats: number[];
+  claps: number[];
 };
 
 export type ClipRef = {

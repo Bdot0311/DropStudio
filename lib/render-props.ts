@@ -16,6 +16,7 @@ export function liteMap(m: MusicMap): LiteMap {
     env: { fps: e.fps, rms: e.rms, low: e.low, mid: e.mid, high: e.high, kick: e.kick, bass: e.bass, other: e.other },
     kicks: m.onsets.kick,
     hats: m.onsets.hats,
+    claps: m.onsets.snare_clap ?? [],
   };
 }
 

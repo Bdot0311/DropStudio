@@ -8,7 +8,7 @@ export function Thumb(props: VideoProps & { at: number; showText: boolean }) {
   const ty = presetConfig(props.preset).typography;
   return (
     <AbsoluteFill>
-      <Visual {...props} t={props.at} frame={Math.round(props.at * 30)} titleMode="none" style={{ ...props.style, debug: false }} />
+      <Visual {...props} t={props.at} frame={Math.round(props.at * 30)} titleMode="none" noCaptions style={{ ...props.style, debug: false }} />
       {props.showText && (
         <AbsoluteFill style={{ justifyContent: "flex-end", padding: 56, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.65))" }}>
           <div style={{ color: "white", fontFamily: ty.family, fontWeight: Math.max(600, ty.weight), letterSpacing: ty.tracking, textTransform: ty.transform, fontStyle: ty.style ?? "normal", textShadow: "0 4px 30px rgba(0,0,0,0.8)" }}>

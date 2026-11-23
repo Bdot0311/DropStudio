@@ -26,8 +26,9 @@ export async function POST(req: Request, { params }: Ctx) {
   const kind = String(body.kind ?? "main");
   if (!["main", "short", "loop"].includes(kind)) return error("Unknown render kind");
   const running = activeJob(id, "render");
-  if (running && (running.params as { kind?: string }).kind === kind) return json(running);
-  const allowed = ["kind", "width", "height", "fps", "crf", "debug", "startTime", "duration", "loopBars"];
+  const name = (body.name as string | undefined) ?? kind;
+  if (running && ((running.params as { name?: string; kind?: string }).name ?? (running.params as { kind?: string }).kind) === name) return json(running);
+  const allowed = ["kind", "width", "height", "fps", "crf", "debug", "startTime", "duration", "loopBars", "name"];
   const params_ = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
   return json(enqueueJob("render", "node", id, params_), 202);
 }

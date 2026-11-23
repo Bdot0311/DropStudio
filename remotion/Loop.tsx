@@ -15,10 +15,10 @@ export function Loop(props: LoopProps) {
   const fade = local < props.fadeSeconds ? 1 - local / props.fadeSeconds : 0;
   return (
     <AbsoluteFill>
-      <Visual {...props} t={t} frame={frame} slotPrefix="a" />
+      <Visual {...props} t={t} frame={frame} slotPrefix="a" noCaptions />
       {fade > 0 && (
         <AbsoluteFill style={{ opacity: fade }}>
-          <Visual {...props} t={t + props.loopSeconds} frame={frame} slotPrefix="b" />
+          <Visual {...props} t={t + props.loopSeconds} frame={frame} slotPrefix="b" noCaptions />
         </AbsoluteFill>
       )}
     </AbsoluteFill>

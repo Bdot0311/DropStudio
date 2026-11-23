@@ -23,6 +23,36 @@ export function suggestShortWindow(map: MapLike, preBars = 2): { start: number; 
   return { start, end: snapTo(map.downbeats, end, map.duration) };
 }
 
+export type SocialPreset = {
+  id: string; label: string; platform: string; w: number; h: number;
+  lengths: number[]; def: number; max: number; note: string; file: string;
+};
+
+/** Social formats. Lengths are seconds; "full" (max = Infinity) renders the whole track in that shape. */
+export const SOCIAL_PRESETS: SocialPreset[] = [
+  { id: "shorts", label: "YouTube Shorts", platform: "YouTube", w: 1080, h: 1920, lengths: [15, 30, 45, 60], def: 30, max: 180, note: "Up to 3 min. 30–60 s performs best.", file: "short" },
+  { id: "tiktok", label: "TikTok", platform: "TikTok", w: 1080, h: 1920, lengths: [15, 30, 60, 90, 180], def: 30, max: 600, note: "Up to 10 min when uploaded. 20–60 s is the sweet spot.", file: "tiktok" },
+  { id: "reels", label: "Instagram Reels", platform: "Instagram", w: 1080, h: 1920, lengths: [15, 30, 60, 90], def: 30, max: 180, note: "Up to 3 min. 15–30 s gets the most replays.", file: "reels" },
+  { id: "feed", label: "Instagram / Facebook feed (4:5)", platform: "Instagram", w: 1080, h: 1350, lengths: [15, 30, 60], def: 30, max: 60, note: "Portrait post: takes the most space in the feed.", file: "feed-4x5" },
+  { id: "square", label: "Square (1:1)", platform: "Any", w: 1080, h: 1080, lengths: [15, 30, 60], def: 30, max: 60, note: "Works everywhere, including X and Facebook.", file: "square" },
+  { id: "full-vertical", label: "Full track, vertical", platform: "TikTok / YouTube", w: 1080, h: 1920, lengths: [], def: 0, max: Infinity, note: "The whole song in 9:16, for TikTok long videos or a vertical YouTube upload.", file: "full-vertical" },
+];
+
+/** A window of `seconds` that starts `preBars` before the biggest drop, snapped to bars and kept inside the track. */
+export function windowForLength(map: MapLike, seconds: number, preBars = 2): { start: number; end: number } {
+  if (!isFinite(seconds) || seconds <= 0 || seconds >= map.duration) return { start: 0, end: map.duration };
+  const bar = (60 / map.bpm) * 4;
+  const drop = biggestDropSection(map);
+  const di = nearest(map.downbeats, drop.start);
+  let start = map.downbeats[Math.max(0, di - preBars)] ?? Math.max(0, drop.start - preBars * bar);
+  let end = start + Math.round(seconds / bar) * bar;
+  if (end > map.duration) {
+    end = map.duration;
+    start = Math.max(0, snapTo(map.downbeats, end - seconds, end));
+  }
+  return { start, end: Math.min(map.duration, end) };
+}
+
 export function snapTo(sorted: number[], t: number, max: number): number {
   if (!sorted.length) return t;
   const v = sorted[nearest(sorted, t)];
