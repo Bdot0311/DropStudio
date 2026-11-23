@@ -15,7 +15,8 @@
     "fixture": "node scripts/run-python.mjs -m worker.fixtures.make_fixture fixtures/test_128bpm.wav",
     "test": "npm run test:analysis",
     "test:analysis": "node scripts/run-python.mjs -m pytest -q",
-    "check:sync": "node scripts/run-python.mjs scripts/checks/sync-check.py"
+    "check:sync": "node scripts/run-python.mjs scripts/checks/sync-check.py",
+    "check:pipeline": "node scripts/checks/pipeline-check.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",

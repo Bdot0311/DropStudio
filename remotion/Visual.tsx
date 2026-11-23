@@ -151,7 +151,7 @@ function ClipTreatment({ preset, colors, frame, grain }: { preset: PresetConfig;
     let s = (frame * 2654435761) >>> 0;
     for (let i = 0; i < img.data.length; i += 4) {
       s = (s * 1664525 + 1013904223) >>> 0;
-      const v = s >>> 24;
+      const v = 128 + (((s >>> 24) - 128) >> 1);
       img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
       img.data[i + 3] = 255;
     }
@@ -162,7 +162,7 @@ function ClipTreatment({ preset, colors, frame, grain }: { preset: PresetConfig;
     <>
       <AbsoluteFill style={{ background: tint, mixBlendMode: "soft-light", opacity: preset.id === "techno" ? 0.15 : 0.3 }} />
       {preset.id === "techno" && <AbsoluteFill style={{ backdropFilter: "grayscale(0.85) contrast(1.2)" }} />}
-      {grain > 0 && <canvas ref={ref} width={320} height={180} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", mixBlendMode: "overlay", opacity: Math.min(0.5, grain * 1.2), imageRendering: "pixelated" }} />}
+      {grain > 0 && <canvas ref={ref} width={640} height={360} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", mixBlendMode: "overlay", opacity: Math.min(0.18, grain * 0.45) }} />}
       <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
     </>
   );

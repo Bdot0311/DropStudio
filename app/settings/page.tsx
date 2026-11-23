@@ -77,13 +77,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label>Default provider</Label>
-            <Select value={form.default_provider || "none"} onValueChange={set("default_provider")}>
+            <Label>AI provider</Label>
+            <Select value={form.default_provider || "mock"} onValueChange={set("default_provider")}>
               <SelectTrigger className="w-64">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None (visualizer only)</SelectItem>
+                <SelectItem value="mock">Test provider (free, fake footage)</SelectItem>
                 <SelectItem value="fal">fal.ai</SelectItem>
                 <SelectItem value="replicate">Replicate</SelectItem>
                 <SelectItem value="comfyui">Local ComfyUI</SelectItem>
@@ -96,7 +96,8 @@ export default function SettingsPage() {
             <Label htmlFor="comfy">ComfyUI URL</Label>
             <Input id="comfy" value={form.comfyui_url ?? ""} onChange={(e) => set("comfyui_url")(e.target.value)} className="max-w-sm" />
           </div>
-          <p className="text-xs text-muted-foreground">Model choices and prices come with the AI pipeline in Phase 3 (editable in <code>config/models.json</code>).</p>
+          <ModelPickers provider={form.default_provider || "mock"} form={form} set={set} />
+          <p className="text-xs text-muted-foreground">Models and prices come from <code>config/models.json</code>. Edit that file when providers add models or change prices (prices are only used for estimates and the budget cap).</p>
         </CardContent>
       </Card>
 
@@ -160,6 +161,34 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+type ModelOpt = { id: string; label: string; tier?: string };
+function ModelPickers({ provider, form, set }: { provider: string; form: Record<string, string>; set: (k: string) => (v: string) => void }) {
+  const { data } = useSWR<Record<string, { label: string; image: ModelOpt[]; video: ModelOpt[] }>>("/api/models", fetcher);
+  const p = data?.[provider];
+  if (!p) return null;
+  const pick = (key: string, label: string, list: ModelOpt[], tier?: string) => {
+    const fallback = (list.find((m) => !tier || m.tier === tier) ?? list[0])?.id ?? "";
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs">{label}</Label>
+        <Select value={form[key] || fallback} onValueChange={set(key)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {list.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {pick(`${provider}_image_model`, "Keyframe images", p.image)}
+      {pick(`${provider}_video_draft`, "Clips: draft tier", p.video, "draft")}
+      {pick(`${provider}_video_final`, "Clips: final tier", p.video, "final")}
     </div>
   );
 }
