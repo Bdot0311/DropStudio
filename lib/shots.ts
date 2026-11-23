@@ -21,7 +21,7 @@ export type Shot = {
 };
 
 export function listShots(projectId: string): Shot[] {
-  return db().prepare("SELECT * FROM shots WHERE project_id=? ORDER BY idx").all(projectId) as Shot[];
+  return db().prepare("SELECT * FROM shots WHERE project_id=? ORDER BY section_index, idx").all(projectId) as Shot[];
 }
 
 export function getShot(id: string): Shot | null {
@@ -53,7 +53,7 @@ const nextIdx = (projectId: string) =>
  * Build a storyboard from the preset templates and the vibe. Shots per section scale with its
  * length; drops get the most. Aimed at ~60-100 s of footage for a 6-minute track (12-20 clips).
  */
-export function buildStoryboard(projectId: string, opts: { replace?: boolean } = {}): Shot[] {
+export function buildStoryboard(projectId: string, opts: { replace?: boolean; onlyMissing?: boolean } = {}): Shot[] {
   const project = getProject(projectId);
   const map = readMusicMap(projectId);
   if (!project || !map) throw new Error("Analyze the track first");
@@ -72,11 +72,16 @@ export function buildStoryboard(projectId: string, opts: { replace?: boolean } =
   const counts = raw.map((r) => Math.max(1, Math.round((r / sum) * target)));
 
   if (opts.replace) db().prepare("DELETE FROM shots WHERE project_id=?").run(projectId);
+  // onlyMissing: keep every existing shot and add shots only to sections that have none yet.
+  const existing = opts.replace ? [] : listShots(projectId);
+  const covered = new Set(existing.map((x) => x.section_index));
   const used: Record<string, number> = {};
+  for (const x of existing) used[x.section_type] = (used[x.section_type] ?? 0) + 1;
   let idx = nextIdx(projectId);
   const insert = db().prepare("INSERT INTO shots (id, project_id, idx, section_index, section_type, prompt, seed, status, updated_at) VALUES (?,?,?,?,?,?,?,?,?)");
   const angles = [", alternate angle", ", closer shot", ", wider shot", ", different moment"];
   sections.forEach((s, j) => {
+    if (opts.onlyMissing && covered.has(s.i)) return;
     const templates = preset.prompts[s.type];
     for (let n = 0; n < counts[j]; n++) {
       const u = used[s.type] ?? 0;

@@ -76,7 +76,28 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
         </Card>
       ) : (
         <>
-          <TimelineLane projectId={id} shots={shots} onAdd={async (i) => { await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "add", sectionIndex: i } }); mutate(); }} />
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm">
+            <span className="text-muted-foreground">AI footage on:</span>
+            {([["hybrid", "Builds & drops (shaders elsewhere)"], ["montage", "Every section"]] as const).map(([m, l]) => (
+              <button
+                key={m}
+                onClick={async () => {
+                  if (data.mode === m) return;
+                  try {
+                    await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "coverage", mode: m } });
+                    mutate();
+                    toast.success(m === "montage" ? "AI footage on every section: shots added for the missing sections. Existing keyframes kept." : "AI footage on builds and drops only; other sections use shader visuals.");
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}
+                className={cn("cursor-pointer rounded-md border px-2.5 py-1 text-xs", data.mode === m ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          <TimelineLane projectId={id} shots={shots} mode={data.mode} onAdd={async (i) => { await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "add", sectionIndex: i } }); mutate(); }} />
 
           {data.otherProviderKeyframes > 0 && (
             <p className="text-xs text-muted-foreground">{data.otherProviderKeyframes} keyframe{data.otherProviderKeyframes === 1 ? " was" : "s were"} made with another provider and will be regenerated with {data.provider.label}.</p>

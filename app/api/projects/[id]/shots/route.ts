@@ -1,7 +1,7 @@
 import { addShot, buildStoryboard, listShots, needsKeyframe } from "@/lib/shots";
 import { budgetCap, projectSpend } from "@/lib/spend";
 import { readModels, selectedModels, imageCost, clipCost } from "@/lib/models";
-import { getProject } from "@/lib/projects";
+import { getProject, updateProject } from "@/lib/projects";
 import { getSetting } from "@/lib/settings";
 import { activeJob, latestJob } from "@/lib/jobs";
 import { error, json, readJson } from "@/lib/http";
@@ -15,6 +15,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   const m = selectedModels();
   const shots = listShots(id);
   return json({
+    mode: getProject(id)!.mode,
     shots,
     needKeyframes: shots.filter((s) => needsKeyframe(s, m.provider)).length,
     otherProviderKeyframes: shots.filter((s) => s.keyframe && needsKeyframe(s, m.provider)).length,
@@ -34,12 +35,21 @@ export async function GET(_req: Request, { params }: Ctx) {
   });
 }
 
-/** { action: "build", replace?: boolean } | { action: "add", sectionIndex: number } */
+/**
+ * { action: "build", replace?: boolean } | { action: "add", sectionIndex: number }
+ * | { action: "coverage", mode: "hybrid" | "montage" }  switch where AI footage goes; adds shots for
+ *   newly covered sections and keeps every existing shot (nothing generated is lost or re-billed).
+ */
 export async function POST(req: Request, { params }: Ctx) {
   const { id } = await params;
-  const body = await readJson<{ action?: string; replace?: boolean; sectionIndex?: number }>(req);
+  const body = await readJson<{ action?: string; replace?: boolean; sectionIndex?: number; mode?: string }>(req);
   try {
     if (body.action === "add") return json(addShot(id, Number(body.sectionIndex)));
+    if (body.action === "coverage") {
+      const mode = body.mode === "montage" ? "montage" : "hybrid";
+      updateProject(id, { mode });
+      return json(buildStoryboard(id, { onlyMissing: true }));
+    }
     return json(buildStoryboard(id, { replace: body.replace ?? true }));
   } catch (e) {
     return error((e as Error).message, 409);

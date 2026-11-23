@@ -8,7 +8,7 @@ import type { Shot } from "@/lib/shots";
 import { ShotThumb } from "./shot-card";
 
 /** Waveform + section blocks, with a lane of shot thumbnails placed under the section each belongs to. */
-export function TimelineLane({ projectId, shots, onAdd }: { projectId: string; shots: Shot[]; onAdd?: (sectionIndex: number) => void }) {
+export function TimelineLane({ projectId, shots, onAdd, mode }: { projectId: string; shots: Shot[]; onAdd?: (sectionIndex: number) => void; mode?: string }) {
   const { data: map } = useSWR<MusicMap>(`/api/projects/${projectId}/music-map`, fetcher);
   const { data: peaks } = useSWR<{ data: number[] }>(`/api/projects/${projectId}/files/peaks.json`, fetcher);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -42,12 +42,14 @@ export function TimelineLane({ projectId, shots, onAdd }: { projectId: string; s
       <div className="relative mt-2 flex gap-px">
         {map.sections.map((s, i) => {
           const own = shots.filter((x) => x.section_index === i && x.status !== "rejected");
+          const shader = mode === "hybrid" && s.type !== "drop" && s.type !== "build";
           return (
             <div key={i} className="min-w-0 border-t-2 pt-1.5" style={{ width: `${((s.end - s.start) / map.duration) * 100}%`, borderColor: SECTION_COLORS[s.type].solid }}>
               <div className="mb-1 truncate text-[10px] uppercase tracking-wide text-muted-foreground">{s.type} · {fmtTime(s.start)}</div>
               <div className="flex flex-wrap gap-1">
+                {shader && !own.length && <div className="rounded border border-dashed px-1.5 py-1 text-[10px] leading-tight text-muted-foreground">shader visuals</div>}
                 {own.map((shot) => <ShotThumb key={shot.id} shot={shot} className="w-14" />)}
-                {onAdd && (
+                {onAdd && !shader && (
                   <button onClick={() => onAdd(i)} className="grid aspect-video w-8 cursor-pointer place-items-center rounded border border-dashed text-xs text-muted-foreground hover:text-foreground" title="Add a shot to this section">+</button>
                 )}
               </div>

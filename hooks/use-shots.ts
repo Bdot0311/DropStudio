@@ -5,6 +5,7 @@ import type { Job } from "@/lib/types";
 import type { Shot } from "@/lib/shots";
 
 export type ShotsPayload = {
+  mode: "visualizer" | "montage" | "hybrid";
   shots: Shot[];
   needKeyframes: number;
   otherProviderKeyframes: number;
