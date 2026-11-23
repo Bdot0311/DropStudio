@@ -66,14 +66,18 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
       // Style override: HyperFrames-style transitions on cuts (the drop keeps its preset entrance for impact).
       const tm = style.transitionMode ?? "preset";
       if (tm !== "preset" && index > 0 && !(j === 0 && sec.type === "drop")) {
-        transition = tm === "whip" ? "whip_pan" : tm === "zoom" ? "zoom_through" : index % 2 ? "whip_pan" : "zoom_through";
+        const MODE: Record<string, TransitionId> = { whip: "whip_pan", zoom: "zoom_through", chroma: "chroma_wipe", push: "push_wipe", pixelate: "pixelate", freeze: "freeze_cut", white: "white_through", zoomblur: "zoom_blur" };
+        const ALL = Object.values(MODE);
+        transition = tm === "mix" ? ALL[(index + Math.floor(rand(seed * 41) * 3)) % ALL.length] : MODE[tm] ?? transition;
       }
       const transitionSeconds =
         transition === "crossfade" ? Math.min(preset.transitions.beats * beat, (bounds[j + 1] - bounds[j]) * 0.5)
         : transition === "cut" ? 0
         : transition === "flash" ? beat * 0.75
         : transition === "whip_pan" ? Math.min(beat, (bounds[j + 1] - bounds[j]) * 0.5)
-        : transition === "zoom_through" ? Math.min(2 * beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        : transition === "zoom_through" || transition === "chroma_wipe" || transition === "pixelate" ? Math.min(2 * beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        : transition === "push_wipe" || transition === "white_through" || transition === "zoom_blur" ? Math.min(beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        : transition === "freeze_cut" ? Math.min(beat * 0.5, (bounds[j + 1] - bounds[j]) * 0.5)
         : beat * 0.5;
 
       let clip: Segment["clip"] = null;

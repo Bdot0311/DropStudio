@@ -168,12 +168,12 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
             )}
             <div className="space-y-1.5">
               <Label className="text-[11px] text-muted-foreground">Transitions on cuts (ported from HyperFrames)</Label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {([["preset", "Preset"], ["whip", "Whip pan"], ["zoom", "Zoom through"], ["mix", "Mix"]] as const).map(([v, l]) => (
-                  <button key={v} onClick={() => set("transitionMode", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.transitionMode === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+              <div className="grid grid-cols-5 gap-1.5">
+                {([["preset", "Preset"], ["whip", "Whip pan"], ["zoom", "Zoom through"], ["chroma", "Chroma wipe"], ["push", "Push"], ["pixelate", "Pixelate"], ["freeze", "Freeze cut"], ["white", "Flash white"], ["zoomblur", "Zoom blur"], ["mix", "Mix all"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("transitionMode", v)} className={cn("cursor-pointer rounded-md border px-1.5 py-1.5 text-[11px]", style.transitionMode === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground">Whip pan: one-beat lateral whip with motion blur. Zoom through: two-beat push with a light sweep and RGB flicker. The drop keeps its own entrance.</p>
+              <p className="text-[11px] text-muted-foreground">Drops keep their own entrance. Mix all rotates through every HyperFrames transition.</p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-[11px] text-muted-foreground">Camera shake (HyperFrames profiles; follows the music&apos;s loudness)</Label>
@@ -188,6 +188,31 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
               <div className="grid grid-cols-3 gap-1.5">
                 {([["off", "Off"], ["drops", "On each drop"], ["bars", "Every bar in drops"]] as const).map(([v, l]) => (
                   <button key={v} onClick={() => set("beatAccent", v)} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-[11px]", style.beatAccent === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Camera move on every cut (parallax zoom)</Label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {([["off", "Off"], ["push", "Push in"], ["pull", "Pull out"], ["alternate", "Alternate"], ["dolly", "Dolly zoom"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("cameraMove", v)} className={cn("cursor-pointer rounded-md border px-1.5 py-1.5 text-[11px]", style.cameraMove === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Cover art moves faster than the visuals for depth. Dolly zoom makes builds rush in behind the subject.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Looks</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {([["flare", "Anamorphic flares on kicks"], ["leaks", "Light leaks"], ["vhs", "VHS / CRT"], ["halftone", "LED wall (halftone)"]] as const).map(([k, l]) => (
+                  <button key={k} onClick={() => set("looks", { ...style.looks, [k]: !style.looks[k] })} className={cn("cursor-pointer rounded-md border px-2 py-1.5 text-left text-[11px]", style.looks[k] ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{style.looks[k] ? "✓ " : ""}{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Audio waveform overlay</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([["off", "Off"], ["bars", "Equalizer bars"], ["mirror", "Mirrored center"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("waveform", v)} className={cn("cursor-pointer rounded-md border px-1.5 py-1.5 text-[11px]", style.waveform === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
                 ))}
               </div>
             </div>

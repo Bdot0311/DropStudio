@@ -7,7 +7,7 @@ import type { PresetConfig, StyleConfig } from "../lib/presets/configs";
 import { beatInfo, lastIndexAtOrBefore, rand } from "./lib/music";
 import type { LiteMap, VideoProps } from "./types";
 import { ShutterSlam, shutterSeconds } from "./fxPorts";
-import { CAPTION_STYLES, CharSlam, StyledCaption, backOut, type CaptionStyle } from "./captionStyles";
+import { ACTIVE_WORD_STYLES, CAPTION_STYLES, CharSlam, StyledCaption, backOut, type CaptionStyle } from "./captionStyles";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
@@ -171,14 +171,15 @@ export function Captions(props: VideoProps & { t: number; frame: number; presetC
     const sinceBeat = (t - firstBeat) / period - beatsIn;
     const fadeOut = clamp01((hookEnd - t) / (period * 0.5));
     // Karaoke shows every word up front and highlights the current one; the rest pop in per beat.
-    const shown = variant === "karaoke" ? words.length : Math.min(words.length, Math.max(1, beatsIn + 1));
+    const activeStyle = ACTIVE_WORD_STYLES.includes(variant);
+    const shown = activeStyle ? words.length : Math.min(words.length, Math.max(1, beatsIn + 1));
     const size = base * (vertical ? 0.085 : 0.075);
     nodes.push(
       <AbsoluteFill key="hook" style={{ alignItems: "center", justifyContent: "flex-start", paddingTop: top }}>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: `${base * 0.012}px ${base * 0.022}px`, maxWidth: "88%", opacity: fadeOut, transform: "translateY(-50%)" }}>
           {words.slice(0, shown).map((w, i) => {
             const isNew = i === Math.min(beatsIn, words.length - 1);
-            const enter = i < beatsIn ? 1 : clamp01(sinceBeat * 2.5);
+            const enter = activeStyle ? (isNew ? clamp01(sinceBeat * 4) : 0) : i < beatsIn ? 1 : clamp01(sinceBeat * 2.5);
             return (
               <StyledCaption
                 key={i}
@@ -188,7 +189,7 @@ export function Captions(props: VideoProps & { t: number; frame: number; presetC
                 enter={enter}
                 frame={frame}
                 colors={colors}
-                active={variant === "karaoke" && isNew}
+                active={activeStyle && isNew}
                 scale={variant === "karaoke" ? (isNew ? 1 + 0.08 * (1 - sinceBeat) : 1) : isNew && beatsIn < words.length ? backOut(sinceBeat * 5) : 1}
               />
             );
@@ -206,7 +207,7 @@ export function Captions(props: VideoProps & { t: number; frame: number; presetC
       const into = 1 - (dt / period - (n - 1)); // 0→1 within that beat
       nodes.push(
         <AbsoluteFill key="cd" style={{ alignItems: "center", justifyContent: "center" }}>
-          <StyledCaption text={String(n)} size={base * 0.28} variant={variant === "karaoke" ? "slam" : variant} enter={clamp01(into * 3)} frame={frame} colors={colors} scale={backOut(into * 4) * (1 + 0.1 * (3 - n))} opacity={clamp01((1 - into) * 3)} />
+          <StyledCaption text={String(n)} size={base * 0.28} variant={ACTIVE_WORD_STYLES.includes(variant) ? "slam" : variant} enter={clamp01(into * 3)} frame={frame} colors={colors} scale={backOut(into * 4) * (1 + 0.1 * (3 - n))} opacity={clamp01((1 - into) * 3)} />
         </AbsoluteFill>
       );
     } else if (caps.drop && dt <= 0 && style.dropAnimation === "shutter" && -dt < shutterSeconds(period) + period) {

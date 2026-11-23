@@ -82,7 +82,7 @@ export function ShutterSlam({ text, size, tau, period, fps, width, height, varia
               transform: `translate(${(p.x / 100) * width}px, ${(p.y / 100) * height}px) scale(${p.s}) rotateX(${p.rx}deg) rotateY(${p.ry}deg) rotateZ(${p.rz}deg)`,
             }}
           >
-            <StyledCaption text={text} size={size} variant={variant === "karaoke" ? "slam" : variant} enter={1} frame={frame} colors={colors} />
+            <StyledCaption text={text} size={size} variant={variant === "karaoke" || variant === "highlight" ? "slam" : variant} enter={1} frame={frame} colors={colors} />
           </AbsoluteFill>
         );
       })}

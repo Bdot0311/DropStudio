@@ -3,7 +3,7 @@
 import type { SectionType } from "../types";
 
 export type SceneId = "tunnel" | "particles" | "liquid" | "lasers" | "terrain" | "kaleido";
-export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom" | "whip_pan" | "zoom_through";
+export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom" | "whip_pan" | "zoom_through" | "chroma_wipe" | "push_wipe" | "pixelate" | "freeze_cut" | "white_through" | "zoom_blur";
 
 export type PresetConfig = {
   id: "melodic" | "tech_house" | "techno" | "future_rave";
@@ -166,9 +166,9 @@ export type StyleConfig = {
   /** "clean" = preset look only; "capcut" = velocity surges, beat punches, strobes, captions. */
   editStyle: "clean" | "capcut";
   /** Caption look in CapCut mode (ported HyperFrames styles, see remotion/captionStyles.tsx). */
-  captionStyle: "slam" | "glitch" | "karaoke" | "neon" | "gradient" | "decode";
+  captionStyle: "slam" | "glitch" | "karaoke" | "neon" | "gradient" | "decode" | "highlight" | "clipwipe" | "blurin";
   /** Cut transitions: the preset's own, or HyperFrames-style whip pan / zoom through / a mix of both. */
-  transitionMode: "preset" | "whip" | "zoom" | "mix";
+  transitionMode: "preset" | "whip" | "zoom" | "chroma" | "push" | "pixelate" | "freeze" | "white" | "zoomblur" | "mix";
   /** How the drop text arrives: letters fly together (char-slam-explode) or HyperFrames shutter-slam. */
   dropAnimation: "explode" | "shutter";
   /** HyperFrames light-sweep-pass: a light band crosses once per phrase, then a resting key light. */
@@ -177,6 +177,12 @@ export type StyleConfig = {
   cameraShake: string;
   /** HyperFrames beat-accent sting: off, on every drop, or on every bar inside drops. */
   beatAccent: "off" | "drops" | "bars";
+  /** Per-cut camera move: parallax zoom in/out, alternating, or a dolly zoom on builds. */
+  cameraMove: "off" | "push" | "pull" | "alternate" | "dolly";
+  /** Overlay looks: anamorphic flare, organic light leaks, VHS/CRT, LED halftone. */
+  looks: { flare: boolean; leaks: boolean; vhs: boolean; halftone: boolean };
+  /** Equalizer overlay driven by the track. */
+  waveform: "off" | "bars" | "mirror";
   letterbox: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
   captions: { hook: string; drop: string; cta: string };
@@ -184,5 +190,6 @@ export type StyleConfig = {
 
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
-  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, cameraShake: "off", beatAccent: "off", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+  editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, cameraShake: "off", beatAccent: "off", cameraMove: "off",
+  looks: { flare: false, leaks: false, vhs: false, halftone: false }, waveform: "off", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
 };

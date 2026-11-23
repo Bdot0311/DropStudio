@@ -7,6 +7,8 @@ import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline
 import type { VideoProps } from "./types";
 import { whipPan, zoomThrough } from "./transitions";
 import { AccentFlash, LightSweep, accentHits, beatAccentAt, cameraShake } from "./fxPorts";
+import { AnamorphicFlare, HalftoneOverlay, OrganicLeaks, PixelateGrid, VhsOverlay, WaveformBars, cameraMove, chromaWipe, dirFromSeed, freezeCut, pushWipe, whiteThrough, zoomBlur } from "./fxPack";
+import { lastIndexAtOrBefore } from "./lib/music";
 import { Captions, LightLeak, Letterbox, RgbSplitFilter, capcutCamera, clapSplit, isCapcut, velocityOffset } from "./EditFx";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -50,8 +52,8 @@ export function Visual(props: Props) {
   const vel = capcut ? 0.9 * Math.min(1.5, k) : 0;
   const velNow = velocityOffset(map, t, vel);
 
-  const baseU = (seg: Segment): Uniforms => ({
-    time: (motionTime(map, t) + velNow) * r.speed + seg.seed * 50,
+  const baseU = (seg: Segment, tt: number = t): Uniforms => ({
+    time: (motionTime(map, tt) + (tt === t ? velNow : velocityOffset(map, tt, vel))) * r.speed + seg.seed * 50,
     beat: b.phase,
     kick: kick * Math.min(1.5, k),
     bass, low: envAt(map.env.low, fpsE, t), mid: envAt(map.env.mid, fpsE, t), high,
@@ -65,11 +67,12 @@ export function Visual(props: Props) {
   const glH = Math.round(height * (props.glScale ?? 1));
   const slot = (seg: Segment) => `${props.slotPrefix ?? ""}gl${seg.index % 2}`;
 
-  const layer = (seg: Segment, css: React.CSSProperties) =>
+  // `tt` lets a transition draw a shot at another time (freeze-cut holds the outgoing shot still).
+  const layer = (seg: Segment, css: React.CSSProperties, tt: number = t) =>
     seg.clip ? (
-      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={t - seg.start + (vel ? velNow - velocityOffset(map, seg.start, vel) : 0)} fps={fps} style={css} />
+      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={tt - seg.start + (vel ? velocityOffset(map, tt, vel) - velocityOffset(map, seg.start, vel) : 0)} fps={fps} style={css} />
     ) : (
-      <ShaderCanvas key={slot(seg)} scene={seg.scene} u={baseU(seg)} width={glW} height={glH} style={css} />
+      <ShaderCanvas key={slot(seg)} scene={seg.scene} u={baseU(seg, tt)} width={glW} height={glH} style={css} />
     );
 
   // --- transitions ---
@@ -113,6 +116,43 @@ export function Visual(props: Props) {
       if (showPrev) transRgb = Math.abs(z.rgb);
       break;
     }
+    case "chroma_wipe": {
+      const c = chromaWipe(p, cur.transitionSeconds, width, dirFromSeed(cur.seed));
+      if (showPrev) layers.push(layer(prev!, c.prev));
+      layers.push(layer(cur, showPrev ? c.cur : {}));
+      if (showPrev && c.extras) layers.push(c.extras);
+      if (showPrev) transRgb = c.rgb;
+      break;
+    }
+    case "push_wipe": {
+      const w = pushWipe(p, dirFromSeed(cur.seed));
+      if (showPrev) layers.push(layer(prev!, w.prev));
+      layers.push(layer(cur, showPrev ? w.cur : {}));
+      break;
+    }
+    case "pixelate":
+      layers.push(showPrev && p < 0.5 ? layer(prev!, {}) : layer(cur, {}));
+      if (showPrev) layers.push(<PixelateGrid key="pix" p={p} width={width} height={height} color={preset.background} />);
+      break;
+    case "freeze_cut": {
+      const f = freezeCut(p);
+      if (showPrev && f.showPrev) layers.push(layer(prev!, f.prev, cur.start - 1 / fps));
+      else layers.push(layer(cur, {}));
+      flash = Math.max(flash, showPrev ? f.flash : 0);
+      break;
+    }
+    case "white_through": {
+      const w = whiteThrough(p);
+      layers.push(showPrev && w.showPrev ? layer(prev!, {}) : layer(cur, {}));
+      if (showPrev) layers.push(<AbsoluteFill key="wash" style={{ background: "#fff", opacity: w.wash }} />);
+      break;
+    }
+    case "zoom_blur": {
+      const z = zoomBlur(p, width);
+      layers.push(showPrev && z.showPrev ? layer(prev!, z.prev) : layer(cur, showPrev ? z.cur : {}));
+      if (showPrev) transRgb = z.rgb;
+      break;
+    }
     case "glitch": {
       const jitter = showPrev && frame % 3 !== 0;
       if (jitter) layers.push(layer(prev!, { transform: `translateX(${(rand(frame) - 0.5) * 6}%)`, filter: "hue-rotate(90deg) saturate(2)" }));
@@ -136,14 +176,18 @@ export function Visual(props: Props) {
     : "saturate(0.92)";
   const kickFlash = kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1);
   const usesClip = !!cur.clip || (prev?.clip && p < 1);
+  const mv = cameraMove(style.cameraMove ?? "off", clamp01((t - cur.start) / Math.max(0.01, cur.end - cur.start)), cur.index, sec.type);
+  const looks = style.looks ?? { flare: false, leaks: false, vhs: false, halftone: false };
+  const ci = lastIndexAtOrBefore(map.claps, t);
+  const clapHit = ci >= 0 && t - map.claps[ci] < 0.12 ? 1 - (t - map.claps[ci]) / 0.12 : 0;
   const cam = capcut ? capcutCamera(map, t, frame, k, sec.type) : null;
   const rgbId = `rgb-${props.slotPrefix ?? "m"}`;
-  const rgb = Math.max(transRgb, capcut ? clapSplit(map.claps, t, width, (cam?.strobe ?? 0) * 0.6 + (cam?.slam ?? 0)) : 0);
+  const rgb = Math.max(transRgb, looks.vhs ? Math.max(1, Math.round(width / 960)) + Math.round(clapHit * width / 400) : 0, capcut ? clapSplit(map.claps, t, width, (cam?.strobe ?? 0) * 0.6 + (cam?.slam ?? 0)) : 0);
   // HyperFrames camera shake (strength follows the music's loudness) and beat accent (on hits).
   const shakeT = style.cameraShake && style.cameraShake !== "off" ? cameraShake(style.cameraShake, t, width, height, Math.min(1.5, k) * (0.45 + 0.75 * rms), Math.min(1.5, k) * 1.2) : "";
   const acc = style.beatAccent && style.beatAccent !== "off" ? beatAccentAt(accentHits(map, style.beatAccent), t, Math.min(1.5, k)) : null;
   const accT = acc ? `translate(${acc.sx}%, ${acc.sy}%) scale(${acc.scale})` : "";
-  const stackTransform = `${shakeT} ${accT} ${cam ? `${cam.transform} scale(${zoom})` : `translate(${sx}%, ${sy}%) scale(${zoom})`}`;
+  const stackTransform = `${mv.bg} ${shakeT} ${accT} ${cam ? `${cam.transform} scale(${zoom})` : `translate(${sx}%, ${sy}%) scale(${zoom})`}`;
   const stackFilter = `${rgb > 0 ? `url(#${rgbId}) ` : ""}${grade}${cam && cam.blur > 0.05 ? ` blur(${cam.blur.toFixed(2)}px)` : ""}`;
   if (cam) flash = Math.min(1, flash + cam.strobe + cam.slam * 0.5);
 
@@ -154,8 +198,17 @@ export function Visual(props: Props) {
         {layers}
         {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} />}
       </AbsoluteFill>
-      {props.style.useCover && props.coverSrc && <CoverLayer src={props.coverSrc} map={map} t={t} kick={kick} bass={bass} preset={preset} />}
-      {capcut && <LightLeak map={map} t={t} colors={colors} />}
+      {looks.halftone && <HalftoneOverlay width={width} height={height} />}
+      {looks.flare && (sec.type === "drop" || sec.type === "build") && <AnamorphicFlare t={t} kick={kick} energy={rms} width={width} height={height} seed={cur.section + 1} />}
+      {looks.leaks && <OrganicLeaks t={t} colors={colors} bpm={map.bpm} />}
+      {props.style.useCover && props.coverSrc && (
+        <AbsoluteFill style={{ transform: mv.fg }}>
+          <CoverLayer src={props.coverSrc} map={map} t={t} kick={kick} bass={bass} preset={preset} />
+        </AbsoluteFill>
+      )}
+      {(capcut || looks.leaks) && <LightLeak map={map} t={t} colors={colors} />}
+      {style.waveform && style.waveform !== "off" && <WaveformBars map={map} t={t} width={width} height={height} colors={colors} mode={style.waveform} />}
+      {looks.vhs && <VhsOverlay t={t} frame={frame} height={height} clapHit={clapHit} />}
       {acc && <AccentFlash scale={acc.flashScale} opacity={0.45 * acc.flashOpacity * (1 - clamp01(flash + kickFlash))} color={colors[3].map((c) => Math.round(255 * (0.7 + 0.3 * c))).join(",")} />}
       {style.lightSweep && <LightSweep map={map} t={t} width={width} colors={colors} />}
       {!capcut && <TitleLayer {...props} presetCfg={preset} />}

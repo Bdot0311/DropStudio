@@ -5,7 +5,7 @@
 import React from "react";
 import { rand } from "./lib/music";
 
-export const CAPTION_STYLES = ["slam", "glitch", "karaoke", "neon", "gradient", "decode"] as const;
+export const CAPTION_STYLES = ["slam", "glitch", "karaoke", "neon", "gradient", "decode", "highlight", "clipwipe", "blurin"] as const;
 export type CaptionStyle = (typeof CAPTION_STYLES)[number];
 
 export const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
@@ -15,7 +15,13 @@ export const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
   neon: "Neon glow",
   gradient: "Gradient bounce",
   decode: "Matrix decode",
+  highlight: "TikTok highlight",
+  clipwipe: "Clip wipe",
+  blurin: "Blur in",
 };
+
+/** Styles that show the whole hook at once and mark the word on the current beat. */
+export const ACTIVE_WORD_STYLES: readonly string[] = ["karaoke", "highlight"];
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 export const backOut = (x: number) => {
@@ -125,6 +131,44 @@ export function StyledCaption(p: CaptionProps) {
         </div>
       );
     }
+    case "highlight": {
+      // caption-highlight: an accent box sweeps in behind the active word (TikTok style).
+      const box = p.active ? clamp01(enter) : 0;
+      return (
+        <div
+          style={{
+            ...base,
+            display: "inline-block",
+            maxWidth: "none",
+            padding: `0 ${size * 0.14}px`,
+            borderRadius: size * 0.12,
+            color: "#fff",
+            WebkitTextStroke: p.active ? "0px transparent" : `${Math.max(2, size * 0.06)}px #000`,
+            paintOrder: "stroke fill",
+            backgroundImage: `linear-gradient(${rgbStr(accent)}, ${rgbStr(accent)})`,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: `${box * 100}% 100%`,
+            textShadow: p.active ? "none" : `0 ${size * 0.05}px ${size * 0.2}px rgba(0,0,0,0.5)`,
+          }}
+        >
+          {text}
+        </div>
+      );
+    }
+    case "clipwipe":
+      // caption-clip-wipe: each word reveals left to right through a clip-path.
+      return (
+        <div style={{ ...base, color: "#fff", WebkitTextStroke: `${Math.max(2, size * 0.06)}px #000`, paintOrder: "stroke fill", clipPath: `inset(-20% ${((1 - clamp01(enter)) * 100).toFixed(2)}% -20% -5%)` }}>
+          {text}
+        </div>
+      );
+    case "blurin":
+      // blur-in: words resolve out of a soft blur while lifting into place.
+      return (
+        <div style={{ ...base, color: "#fff", opacity: (p.opacity ?? 1) * clamp01(enter * 1.5), filter: `blur(${((1 - clamp01(enter)) * size * 0.18).toFixed(2)}px)`, transform: `${base.transform} translateY(${(1 - clamp01(enter)) * size * 0.25}px)`, textShadow: `0 ${size * 0.05}px ${size * 0.3}px rgba(0,0,0,0.6)` }}>
+          {text}
+        </div>
+      );
     default:
       // Kinetic slam: big white type with a black outline (the TikTok/CapCut look).
       return (
@@ -154,7 +198,7 @@ export function CharSlam({ text, size, t, variant, frame, colors }: { text: stri
         const k = 1 - e;
         return (
           <span key={i} style={{ display: "inline-block", transform: `translate(${sx * k}px, ${sy * k}px) rotate(${sr * k}deg) scale(${1 + 0.5 * k})`, opacity: clamp01(q * 4) }}>
-            <StyledCaption text={ch === " " ? " " : ch} size={size} variant={variant === "karaoke" ? "slam" : variant} enter={q} frame={frame} colors={colors} />
+            <StyledCaption text={ch === " " ? " " : ch} size={size} variant={ACTIVE_WORD_STYLES.includes(variant) ? "slam" : variant} enter={q} frame={frame} colors={colors} />
           </span>
         );
       })}
