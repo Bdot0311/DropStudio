@@ -32,6 +32,10 @@ export const SETTINGS = {
   link_instagram: { secret: false, default: "", label: "Instagram" },
   link_tiktok: { secret: false, default: "", label: "TikTok" },
   link_website: { secret: false, default: "", label: "Website" },
+  youtube_client_id: { secret: false, default: "", label: "Google OAuth client ID" },
+  youtube_client_secret: { secret: true, default: "", label: "Google OAuth client secret" },
+  youtube_refresh_token: { secret: true, default: "", label: "YouTube connection" },
+  youtube_channel: { secret: false, default: "", label: "Connected channel" },
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS;

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, fetcher } from "@/lib/utils";
+import { YoutubeSettings } from "@/components/settings/youtube-settings";
 
 type Secret = { set: boolean; last4: string };
 type S = Record<string, string | Secret>;
@@ -133,6 +134,8 @@ export default function SettingsPage() {
           ))}
         </CardContent>
       </Card>
+
+      <YoutubeSettings data={data as Record<string, string | Secret>} onSaved={() => mutate()} />
 
       <Card>
         <CardHeader>

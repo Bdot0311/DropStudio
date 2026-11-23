@@ -10,6 +10,7 @@ function isDone(slug: string, p: Project): boolean {
   if (slug === "upload") return !!p.audio_file;
   if (slug === "analyze") return p.status === "analyzed";
   if (slug === "style") return p.status === "analyzed";
+  if (slug === "storyboard" || slug === "generate") return p.mode !== "visualizer" && p.spend_usd > 0;
   return false;
 }
 
