@@ -18,7 +18,7 @@ import type { Shot } from "@/lib/shots";
 export default function GenerateStep({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data, mutate } = useShots(id);
-  const [tier, setTier] = useState<"draft" | "final">("draft");
+  const [tier, setTier] = useState<"draft" | "final">("final");
   const [confirm, setConfirm] = useState<{ ids?: string[] } | null>(null);
 
   if (!data) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
@@ -71,6 +71,7 @@ export default function GenerateStep({ params }: { params: Promise<{ id: string 
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground">{price.model}</p>
+              {tier === "draft" && <p className="text-[11px] text-warning">Draft clips are low resolution (480p) and look soft in a 1080p video. Use them to test the edit, then animate your keepers in Final for the release.</p>}
               <Button className="w-full" onClick={() => setConfirm({})} disabled={!pending.length || jobActive(job)}>
                 <Clapperboard /> Animate {pending.length} clip{pending.length === 1 ? "" : "s"} (~${(pending.length * price.unit).toFixed(2)})
               </Button>

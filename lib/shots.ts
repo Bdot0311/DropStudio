@@ -110,7 +110,8 @@ export function addShot(projectId: string, sectionIndex: number): Shot {
 /** Ready clips for the editor (src is "cache/<file>", resolved to a URL by the caller). */
 export function listClipRefs(projectId: string) {
   return listShots(projectId)
-    .filter((s) => s.status === "clip_ready" && s.clip && fs.existsSync(path.join(DATA_DIR, s.clip)))
+    // Any shot that has a clip file counts (a failed re-generation must not drop footage you already have).
+    .filter((s) => s.status !== "rejected" && s.clip && fs.existsSync(path.join(DATA_DIR, s.clip)))
     .map((s) => ({ id: s.id, src: s.clip!, duration: s.clip_duration ?? 5, section: s.section_type }));
 }
 

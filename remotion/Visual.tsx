@@ -3,7 +3,7 @@ import { AbsoluteFill, Freeze, Img, OffthreadVideo, useVideoConfig } from "remot
 import { presetConfig, type PresetConfig } from "../lib/presets/configs";
 import { ShaderCanvas, type Uniforms } from "./gl/ShaderCanvas";
 import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, sectionAt } from "./lib/music";
-import { buildTimeline, clipTime, segmentAt, type Segment } from "./lib/timeline";
+import { buildTimeline, clipTime, segmentAt, velocityRamp, type Segment } from "./lib/timeline";
 import type { VideoProps } from "./types";
 import { whipPan, zoomThrough } from "./transitions";
 import { AccentFlash, LightSweep, accentHits, beatAccentAt, cameraShake } from "./fxPorts";
@@ -70,7 +70,14 @@ export function Visual(props: Props) {
   // `tt` lets a transition draw a shot at another time (freeze-cut holds the outgoing shot still).
   const layer = (seg: Segment, css: React.CSSProperties, tt: number = t) =>
     seg.clip ? (
-      <ClipLayer key={`clip${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={tt - seg.start + (vel ? velocityOffset(map, tt, vel) - velocityOffset(map, seg.start, vel) : 0)} fps={fps} style={css} />
+      <ClipLayer
+        key={`clip${props.slotPrefix ?? ""}${seg.index}`}
+        seg={seg}
+        // CapCut: per-cut velocity ramp (burst in, slow-mo out); otherwise real time.
+        local={capcut ? (seg.end - seg.start) * velocityRamp((tt - seg.start) / Math.max(0.01, seg.end - seg.start)) : tt - seg.start}
+        fps={fps}
+        style={css}
+      />
     ) : (
       <ShaderCanvas key={slot(seg)} scene={seg.scene} u={baseU(seg, tt)} width={glW} height={glH} style={css} />
     );
@@ -169,13 +176,17 @@ export function Visual(props: Props) {
   const sx = (rand(frame * 1.3) - 0.5) * shake, sy = (rand(frame * 2.1) - 0.5) * shake;
   const sec = map.sections[cur.section];
   const secProgress = clamp01((t - sec.start) / Math.max(0.01, sec.end - sec.start));
-  const grade =
-    sec.type === "drop" ? "saturate(1.15) contrast(1.08)"
+  const grade = capcut && (cur.clip || prev?.clip)
+    ? `contrast(1.12) saturate(${sec.type === "breakdown" ? 1.0 : 1.22}) brightness(${sec.type === "breakdown" ? 0.92 : 1.02})`
+    : sec.type === "drop" ? "saturate(1.15) contrast(1.08)"
     : sec.type === "breakdown" ? "saturate(0.8) brightness(0.88)"
     : sec.type === "build" ? `brightness(${0.95 + 0.15 * secProgress}) saturate(${1 + 0.15 * secProgress})`
     : "saturate(0.92)";
-  const kickFlash = kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1);
   const usesClip = !!cur.clip || (prev?.clip && p < 1);
+  // White kick flashes over real footage look cheap: keep them subtle on clips.
+  const kickFlash = Math.min(usesClip ? (capcut ? 0.06 : 0.12) : 1, kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1));
+  // CapCut hard cut: a 2-frame flash frame on the cut.
+  if (capcut && cur.transition === "cut" && prev && local < 2 / fps) flash = Math.max(flash, 0.35);
   const mv = cameraMove(style.cameraMove ?? "off", clamp01((t - cur.start) / Math.max(0.01, cur.end - cur.start)), cur.index, sec.type);
   const looks = style.looks ?? { flare: false, leaks: false, vhs: false, halftone: false };
   const ci = lastIndexAtOrBefore(map.claps, t);
@@ -196,7 +207,7 @@ export function Visual(props: Props) {
       {rgb > 0 && <RgbSplitFilter id={rgbId} dx={rgb} />}
       <AbsoluteFill style={{ transform: stackTransform, filter: stackFilter }}>
         {layers}
-        {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} />}
+        {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} clean={capcut} />}
       </AbsoluteFill>
       {looks.halftone && <HalftoneOverlay width={width} height={height} />}
       {looks.flare && (sec.type === "drop" || sec.type === "build") && <AnamorphicFlare t={t} kick={kick} energy={rms} width={width} height={height} seed={cur.section + 1} />}
@@ -236,7 +247,7 @@ function ClipLayer({ seg, local, fps, style }: { seg: Segment; local: number; fp
 }
 
 /** Ties AI footage to the preset: a palette tint and (deterministic) film grain. */
-function ClipTreatment({ preset, colors, frame, grain }: { preset: PresetConfig; colors: number[][]; frame: number; grain: number }) {
+function ClipTreatment({ preset, colors, frame, grain, clean }: { preset: PresetConfig; colors: number[][]; frame: number; grain: number; clean?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     const cv = ref.current;
@@ -253,12 +264,14 @@ function ClipTreatment({ preset, colors, frame, grain }: { preset: PresetConfig;
     ctx.putImageData(img, 0, 0);
   }, [frame, grain]);
   const tint = `rgb(${colors[2].map((c) => Math.round(c * 255)).join(",")})`;
+  // CapCut look: clean, punchy footage (the grade does the work) with only a light vignette.
+  if (clean) return <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.35) 100%)" }} />;
   return (
     <>
-      <AbsoluteFill style={{ background: tint, mixBlendMode: "soft-light", opacity: preset.id === "techno" ? 0.15 : 0.3 }} />
-      {preset.id === "techno" && <AbsoluteFill style={{ backdropFilter: "grayscale(0.85) contrast(1.2)" }} />}
-      {grain > 0 && <canvas ref={ref} width={640} height={360} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", mixBlendMode: "overlay", opacity: Math.min(0.18, grain * 0.45) }} />}
-      <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
+      <AbsoluteFill style={{ background: tint, mixBlendMode: "soft-light", opacity: preset.id === "techno" ? 0.1 : 0.15 }} />
+      {preset.id === "techno" && <AbsoluteFill style={{ backdropFilter: "grayscale(0.6) contrast(1.15)" }} />}
+      {grain > 0 && <canvas ref={ref} width={640} height={360} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", mixBlendMode: "overlay", opacity: Math.min(0.1, grain * 0.3) }} />}
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%)" }} />
     </>
   );
 }

@@ -37,16 +37,23 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
   const segs: Segment[] = [];
   const clipUse = new Map<string, number>();
 
+  // CapCut-style music-video rhythm: fast cuts on drops, builds that accelerate into the drop.
+  const capcut = style.editStyle === "capcut";
+  const CAPCUT_BEATS: Record<string, number> = { intro: 8, build: 4, drop: 2, breakdown: 8, outro: 8 };
   map.sections.forEach((sec, si) => {
-    const unitBeats = Math.max(1, Math.round(preset.cutBeats[sec.type] / style.cutRate));
-    const peakBeats = Math.max(1, Math.round(preset.peakCutBeats / style.cutRate));
+    const unitBeats = Math.max(1, Math.round((capcut ? CAPCUT_BEATS[sec.type] : preset.cutBeats[sec.type]) / style.cutRate));
+    const peakBeats = Math.max(1, Math.round((capcut ? 1 : preset.peakCutBeats) / style.cutRate));
     // Beat times inside this section; cuts land on beats counted from the section start (a downbeat).
     const beats = map.beats.filter((b) => b >= sec.start - 1e-3 && b < sec.end - 1e-3);
     const bounds: number[] = [sec.start];
     let k = 0;
     while (k < beats.length) {
       const half = si === biggest && beats[k] >= (sec.start + sec.end) / 2;
-      const step = half ? peakBeats : unitBeats;
+      let step = half ? peakBeats : unitBeats;
+      if (capcut && sec.type === "build") {
+        const q = (beats[k] - sec.start) / Math.max(0.01, sec.end - sec.start);
+        step = q > 0.75 ? 1 : q > 0.5 ? 2 : unitBeats; // accelerate into the drop
+      }
       k += step;
       if (k < beats.length && beats[k] < sec.end - beat * 0.5) bounds.push(beats[k]);
     }
@@ -63,6 +70,13 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         const w = preset.transitions.within;
         transition = rand(seed * 91) < preset.reactive.glitch ? "glitch" : w[Math.floor(rand(seed * 17) * w.length)];
       }
+      // CapCut rhythm transitions (unless the user picked a transition style).
+      if (capcut && (style.transitionMode ?? "preset") === "preset" && index > 0) {
+        if (sec.type === "drop") transition = j === 0 ? "flash" : "cut";
+        else if (sec.type === "build") transition = j === 0 ? "zoom_blur" : j % 2 ? "whip_pan" : "zoom_blur";
+        else if (sec.type === "breakdown") transition = "crossfade";
+        else transition = j === 0 ? "crossfade" : "cut";
+      }
       // Style override: HyperFrames-style transitions on cuts (the drop keeps its preset entrance for impact).
       const tm = style.transitionMode ?? "preset";
       if (tm !== "preset" && index > 0 && !(j === 0 && sec.type === "drop")) {
@@ -71,7 +85,7 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         transition = tm === "mix" ? ALL[(index + Math.floor(rand(seed * 41) * 3)) % ALL.length] : MODE[tm] ?? transition;
       }
       const transitionSeconds =
-        transition === "crossfade" ? Math.min(preset.transitions.beats * beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        transition === "crossfade" ? Math.min((capcut ? 2 : preset.transitions.beats) * beat, (bounds[j + 1] - bounds[j]) * 0.5)
         : transition === "cut" ? 0
         : transition === "flash" ? beat * 0.75
         : transition === "whip_pan" ? Math.min(beat, (bounds[j + 1] - bounds[j]) * 0.5)
@@ -88,15 +102,18 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         const n = clipUse.get(sec.type) ?? 0;
         clipUse.set(sec.type, n + 1);
         const ref = from[(n + si) % from.length];
-        const speeds = [0.5, 0.75, 1, 1, 1.25];
+        // Forward playback only (reversed AI footage looks wrong), gentle speed variety, slight crop.
+        const speeds = capcut ? [1] : [0.75, 1, 1, 1.25];
         const speed = speeds[Math.floor(rand(seed * 5) * speeds.length)];
+        const segLen = bounds[j + 1] - bounds[j];
         clip = {
           ref,
           speed,
-          mirror: rand(seed * 11) < 0.4,
-          reverse: rand(seed * 13) < 0.25,
-          zoom: 1 + rand(seed * 19) * 0.25,
-          offset: rand(seed * 23) * Math.max(0, ref.duration - 1),
+          mirror: rand(seed * 11) < 0.2,
+          reverse: false,
+          zoom: 1 + rand(seed * 19) * 0.06,
+          // start where the cut can play through without looping
+          offset: rand(seed * 23) * Math.max(0, ref.duration - 0.1 - segLen * speed),
         };
       }
       segs.push({ index, start: bounds[j], end: bounds[j + 1], section: si, type: sec.type, scene, seed, transition, transitionSeconds, clip });
@@ -118,12 +135,17 @@ export function segmentAt(segs: Segment[], t: number): number {
 }
 
 /** Ping-pong clip time so a 5 s clip can fill any segment length without a visible jump. */
+/** Clip time for a moment `local` seconds into its cut. Always forward; a cut longer than the
+ *  clip jumps back to the start (rare: cuts are short and offsets leave room). */
 export function clipTime(c: NonNullable<Segment["clip"]>, local: number): number {
   const d = Math.max(0.1, c.ref.duration - 0.05);
-  let x = c.offset + local * c.speed;
-  const period = 2 * d;
-  x = ((x % period) + period) % period;
-  let t = x <= d ? x : period - x;
-  if (c.reverse) t = d - t;
-  return t;
+  const x = c.offset + Math.max(0, local) * c.speed;
+  return x < d ? x : x % d;
+}
+
+/** CapCut "velocity" ramp within one cut: bursts in at ~2.3x, eases to ~0.35x slow motion by the
+ *  next cut, averaging real time (u: 0..1 through the cut, returns 0..1). */
+export function velocityRamp(u: number): number {
+  const x = Math.min(1, Math.max(0, u));
+  return 0.35 * x + 0.65 * (1 - Math.pow(1 - x, 3));
 }

@@ -103,6 +103,41 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
       </div>
 
       <div className="space-y-4">
+        <Card className="border-primary/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">One-click looks</CardTitle>
+            <CardDescription className="text-xs">Sets every option below to a tested combination. You can still tweak anything afterwards.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            <Button
+              onClick={() =>
+                setStyle((s) => ({
+                  ...s,
+                  editStyle: "capcut", intensity: 1, cutRate: 1, captionStyle: "slam", dropAnimation: "explode",
+                  transitionMode: "preset", cameraMove: "push", cameraShake: "handheld-normal-mild", beatAccent: "drops",
+                  lightSweep: false, letterbox: false, waveform: "off", useCover: true,
+                  looks: { flare: true, leaks: true, vhs: false, halftone: false },
+                }))
+              }
+            >
+              Music video (CapCut style)
+            </Button>
+            <p className="text-[11px] text-muted-foreground">Fast cuts on the beat (every 2 beats in drops, every beat at the peak), builds that speed up into the drop, velocity ramps on every clip, flash frames, punchy colour, hook text, a 3·2·1 countdown and a drop slam.</p>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setStyle((s) => ({
+                  ...s,
+                  editStyle: "clean", transitionMode: "preset", cameraMove: "off", cameraShake: "off", beatAccent: "off",
+                  lightSweep: false, waveform: "off", looks: { flare: false, leaks: false, vhs: false, halftone: false },
+                }))
+              }
+            >
+              Clean (preset look only)
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm">Mode</CardTitle></CardHeader>
           <CardContent className="grid gap-2">
