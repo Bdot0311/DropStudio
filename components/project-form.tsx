@@ -34,6 +34,8 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
   const [audio, setAudio] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [characterFiles, setCharacterFiles] = useState<File[]>([]);
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -74,6 +76,11 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
         setBusy("Uploading cover art");
         await uploadFile(`/api/projects/${p.id}/upload?kind=cover&name=${encodeURIComponent(cover.name)}`, cover);
       }
+      if (characterFiles.length && !consent) throw new Error("Tick the box confirming the character photos are of you (or that you have permission).");
+      for (const ph of characterFiles) {
+        setBusy(`Uploading character photo ${ph.name}`);
+        await uploadFile(`/api/projects/${p.id}/upload?kind=character&name=${encodeURIComponent(ph.name)}`, ph);
+      }
       for (const ph of photos) {
         setBusy(`Uploading ${ph.name}`);
         await uploadFile(`/api/projects/${p.id}/upload?kind=photo&name=${encodeURIComponent(ph.name)}`, ph);
@@ -85,6 +92,7 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
         toast.success("Saved");
         setCover(null);
         setPhotos([]);
+        setCharacterFiles([]);
         onSaved?.();
       }
     } catch (e) {
@@ -101,6 +109,7 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
 
   const existingCover = assets.find((a) => a.kind === "cover");
   const existingPhotos = assets.filter((a) => a.kind === "photo");
+  const existingCharacter = assets.filter((a) => a.kind === "character");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
@@ -222,6 +231,24 @@ export function ProjectForm({ project, assets = [], onSaved }: Props) {
           onRemoveNew={() => setCover(null)}
           onRemoveExisting={removeAsset}
         />
+        <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <ImagePicker
+            label="Your character (optional)"
+            hint="1–4 clear photos of yourself (face visible, good light). AI shots then feature you, like OpenArt character videos. Uses a reference-image model (≈$0.04 per image on fal.ai)."
+            multiple
+            files={characterFiles}
+            existing={existingCharacter}
+            onAdd={(f) => setCharacterFiles((p) => [...p, ...f].slice(0, 4))}
+            onRemoveNew={(i) => setCharacterFiles((p) => p.filter((_, j) => j !== i))}
+            onRemoveExisting={removeAsset}
+          />
+          {(characterFiles.length > 0 || existingCharacter.length > 0) && (
+            <label className="flex cursor-pointer items-start gap-2 text-xs">
+              <input type="checkbox" checked={consent || (existingCharacter.length > 0 && !characterFiles.length)} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 accent-[var(--color-primary)]" />
+              <span>These photos are of me, or I have the person&apos;s permission to put them in AI-generated video.</span>
+            </label>
+          )}
+        </div>
         <ImagePicker
           label="Photos (optional)"
           hint="Press shots or crowd photos you own. They can be mixed into the video."

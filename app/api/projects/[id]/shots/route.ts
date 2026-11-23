@@ -1,4 +1,4 @@
-import { addShot, buildStoryboard, listShots, needsKeyframe } from "@/lib/shots";
+import { addShot, buildStoryboard, characterPaths, listShots, needsKeyframe } from "@/lib/shots";
 import { budgetCap, projectSpend } from "@/lib/spend";
 import { readModels, selectedModels, imageCost, clipCost } from "@/lib/models";
 import { getProject, updateProject } from "@/lib/projects";
@@ -23,6 +23,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     cap: budgetCap(),
     provider: { id: m.provider, label: readModels().providers[m.provider].label },
     keys: { fal: !!getSetting("fal_key"), replicate: !!getSetting("replicate_token") },
+    hasCharacter: characterPaths(id).length > 0,
     prices: {
       image: { model: m.image.label, unit: imageCost(m.image) },
       draft: { model: m.draft.label, unit: clipCost(m.draft), seconds: m.draft.clip_seconds ?? 5 },

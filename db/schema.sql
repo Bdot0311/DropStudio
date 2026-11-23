@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS shots (
   prompt        TEXT NOT NULL,
   seed          INTEGER NOT NULL,
   clip_seed     INTEGER NOT NULL DEFAULT 0,
+  character     INTEGER NOT NULL DEFAULT 0,   -- 1 = feature the user's character (reference photos)
   -- draft | keyframe_queued | keyframe_running | keyframe_ready | approved | rejected
   -- | clip_queued | clip_running | clip_ready | error
   status        TEXT NOT NULL DEFAULT 'draft',

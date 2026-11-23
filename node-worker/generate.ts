@@ -8,7 +8,7 @@ import { getProvider } from "../lib/providers";
 import { ProviderError, type GenResult } from "../lib/providers/types";
 import { fullPrompt, getShot, updateShot, type Shot } from "../lib/shots";
 import { assertBudget, BudgetError, cacheGet, cachePut, recordSpend } from "../lib/spend";
-import { clipKey, keyframeKey, type Tier } from "../lib/generation";
+import { clipKey, keyframeKey, keyframeModel, type Tier } from "../lib/generation";
 import { probe } from "../lib/ffmpeg";
 import type { Job } from "../lib/types";
 import type { Ctx } from "./render";
@@ -61,7 +61,7 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
   const provider = getProvider(m.provider);
   const unit = kind === "keyframes" ? imageCost(model) : clipCost(model);
   const shots = params.shot_ids.map(getShot).filter(Boolean) as Shot[];
-  let done = 0, paid = 0, cachedHits = 0, failed = 0;
+  let done = 0, paid = 0, cachedHits = 0, failed = 0, spentTotal = 0;
   const label = kind === "keyframes" ? "keyframe" : "clip";
 
   await pool(shots, kind === "keyframes" ? 4 : 3, async (shot) => {
@@ -70,7 +70,11 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
       return;
     }
     const fresh = getShot(shot.id)!;
-    const key = kind === "keyframes" ? keyframeKey(m.provider, model, fresh) : clipKey(m.provider, model, fresh);
+    // Character shots: reference-image model + your photos.
+    const km = kind === "keyframes" ? keyframeModel(m, fresh) : { model, refs: [] as string[] };
+    const itemModel = km.model;
+    const itemUnit = kind === "keyframes" ? imageCost(itemModel) : unit;
+    const key = kind === "keyframes" ? keyframeKey(m.provider, itemModel, fresh, km.refs) : clipKey(m.provider, model, fresh);
     const hit = cacheGet(key);
     const ok = (rel: string, duration?: number | null) =>
       kind === "keyframes"
@@ -83,11 +87,11 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
         cachedHits++;
       } else {
         if (kind === "clips" && !fresh.keyframe) throw new ProviderError("This shot has no keyframe yet.", false);
-        assertBudget(pid, unit); // per item, so a batch can never overshoot the cap
+        assertBudget(pid, itemUnit); // per item, so a batch can never overshoot the cap
         updateShot(shot.id, { status: kind === "keyframes" ? "keyframe_running" : "clip_running", error: null });
         const { prompt, negative } = fullPrompt(pid, fresh);
         const req = {
-          model, prompt, negative, seed: kind === "clips" ? fresh.seed + fresh.clip_seed : fresh.seed,
+          model: itemModel, prompt, negative, referencePaths: km.refs, seed: kind === "clips" ? fresh.seed + fresh.clip_seed : fresh.seed,
           imagePath: fresh.keyframe ? path.join(DATA_DIR, fresh.keyframe) : undefined,
         };
         const result = await withRetries(
@@ -97,9 +101,10 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
         const rel = await save(result, key, kind === "keyframes" ? "png" : "mp4");
         let duration: number | null = null;
         if (kind === "clips") duration = (await probe(path.join(DATA_DIR, rel))).duration || model.clip_seconds || 5;
-        cachePut({ key, file: rel, kind: kind === "keyframes" ? "image" : "video", provider: m.provider, model: model.id, usd: unit, duration });
-        recordSpend({ projectId: pid, shotId: shot.id, kind: kind === "keyframes" ? "image" : "video", provider: m.provider, model: model.id, usd: unit, cacheKey: key });
+        cachePut({ key, file: rel, kind: kind === "keyframes" ? "image" : "video", provider: m.provider, model: itemModel.id, usd: itemUnit, duration });
+        recordSpend({ projectId: pid, shotId: shot.id, kind: kind === "keyframes" ? "image" : "video", provider: m.provider, model: itemModel.id, usd: itemUnit, cacheKey: key });
         paid++;
+        spentTotal += itemUnit;
         ok(rel, duration);
       }
     } catch (e) {
@@ -122,7 +127,7 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
     const first = shots.map((s) => getShot(s.id)?.error).find(Boolean);
     throw new Error(`All ${shots.length} ${label}s failed. ${first ?? ""}`.trim());
   }
-  return { generated: paid, cached: cachedHits, failed, spent_usd: +(paid * unit).toFixed(4), model: model.id, provider: m.provider };
+  return { generated: paid, cached: cachedHits, failed, spent_usd: +spentTotal.toFixed(4), model: model.id, provider: m.provider };
 }
 
 export const GENERATE_HANDLERS = {

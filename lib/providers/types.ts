@@ -7,6 +7,8 @@ export type GenRequest = {
   seed: number;
   /** For image-to-video: local path of the keyframe image. */
   imagePath?: string;
+  /** Character reference photos (local paths) for reference-image models. */
+  referencePaths?: string[];
   /** Called with a short status line while waiting on the provider. */
   onStatus?: (s: string) => void;
   signal?: AbortSignal;

@@ -135,6 +135,32 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
             >
               Clean (preset look only)
             </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setStyle((s) => ({
+                    ...s,
+                    editStyle: "performance", frame: "band", lyricBeats: 2, transitionMode: "preset", cameraMove: "push", cameraShake: "off", beatAccent: "off",
+                    lightSweep: false, waveform: "off", letterbox: false, looks: { flare: false, leaks: true, vhs: false, halftone: false },
+                  }))
+                }
+              >
+                Lyric performance
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setStyle((s) => ({
+                    ...s,
+                    editStyle: "teaser", frame: "full", transitionMode: "preset", cameraMove: "push", cameraShake: "handheld-normal-mild", beatAccent: "drops",
+                    lightSweep: false, waveform: "off", letterbox: false, looks: { flare: true, leaks: false, vhs: false, halftone: false },
+                  }))
+                }
+              >
+                Release teaser
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -169,13 +195,40 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              {([["clean", "Clean", "Preset look only"], ["capcut", "CapCut", "Hype edit + captions"]] as const).map(([v, n, d]) => (
+              {([["clean", "Clean", "Preset look only"], ["capcut", "CapCut", "Hype edit + captions"], ["performance", "Performance", "You on screen + lyric words"], ["teaser", "Teaser", "Moody holds, drop burst, date card"]] as const).map(([v, n, d]) => (
                 <button key={v} onClick={() => set("editStyle", v)} className={cn("cursor-pointer rounded-md border p-2.5 text-left", style.editStyle === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>
                   <div className="text-sm font-medium">{n}</div>
                   <div className="text-[11px] text-muted-foreground">{d}</div>
                 </button>
               ))}
             </div>
+            {(style.editStyle === "performance" || style.editStyle === "teaser") && (
+              <div className="space-y-3">
+                <TextField label="Top caption (stays on screen)" placeholder="I can't get this song outta my head..." value={style.captions.top} onChange={(v) => set("captions", { ...style.captions, top: v })} />
+                {style.editStyle === "performance" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Lyric words (shown one at a time, in order, on the beat)</Label>
+                      <textarea value={style.captions.lyrics} placeholder="feeling clouds dreaming on breathing I'm feeling the…" onChange={(e) => set("captions", { ...style.captions, lyrics: e.target.value })} className="flex min-h-[64px] w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      One word every
+                      {[1, 2, 4].map((b) => (
+                        <button key={b} onClick={() => set("lyricBeats", b)} className={cn("cursor-pointer rounded-md border px-2 py-1", style.lyricBeats === b ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary" : "hover:bg-accent")}>{b} beat{b > 1 ? "s" : ""}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {style.editStyle === "teaser" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <TextField label="Release date card" placeholder="24.11.2026" value={style.captions.date} onChange={(v) => set("captions", { ...style.captions, date: v })} />
+                    <TextField label="Handle (last card)" placeholder="@yourname" value={style.captions.handle} onChange={(v) => set("captions", { ...style.captions, handle: v })} />
+                  </div>
+                )}
+                <Toggle id="band" label="16:9 picture band in vertical videos (lyric-video look)" checked={style.frame === "band"} onChange={(v) => set("frame", v ? "band" : "full")} />
+                <p className="text-[11px] text-muted-foreground">These formats use your character clips everywhere. Add your photos on the Upload step, then mark shots with ★ You on the Storyboard.</p>
+              </div>
+            )}
             {style.editStyle === "capcut" && (
               <div className="space-y-3">
                 <div className="space-y-1.5">

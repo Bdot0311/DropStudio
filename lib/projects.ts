@@ -44,6 +44,11 @@ export function listAssets(projectId: string): Asset[] {
 }
 
 export function addAsset(projectId: string, kind: Asset["kind"], filename: string): Asset {
+  if (kind === "character") {
+    // Keep at most 4 reference photos (the most recent ones).
+    const old = db().prepare("SELECT * FROM project_assets WHERE project_id=? AND kind='character' ORDER BY created_at").all(projectId) as Asset[];
+    for (const a of old.slice(0, Math.max(0, old.length - 3))) removeAsset(projectId, a.id);
+  }
   const id = newId();
   if (kind === "cover") {
     // Only one cover per project: replace the old one.

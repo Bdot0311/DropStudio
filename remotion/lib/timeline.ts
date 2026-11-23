@@ -39,9 +39,12 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
 
   // CapCut-style music-video rhythm: fast cuts on drops, builds that accelerate into the drop.
   const capcut = style.editStyle === "capcut";
+  const performance = style.editStyle === "performance";
+  const teaser = style.editStyle === "teaser";
   const CAPCUT_BEATS: Record<string, number> = { intro: 8, build: 4, drop: 2, breakdown: 8, outro: 8 };
   map.sections.forEach((sec, si) => {
-    const unitBeats = Math.max(1, Math.round((capcut ? CAPCUT_BEATS[sec.type] : preset.cutBeats[sec.type]) / style.cutRate));
+    const baseBeats = capcut ? CAPCUT_BEATS[sec.type] : performance || teaser ? 16 : preset.cutBeats[sec.type];
+    const unitBeats = Math.max(1, Math.round(baseBeats / style.cutRate));
     const peakBeats = Math.max(1, Math.round((capcut ? 1 : preset.peakCutBeats) / style.cutRate));
     // Beat times inside this section; cuts land on beats counted from the section start (a downbeat).
     const beats = map.beats.filter((b) => b >= sec.start - 1e-3 && b < sec.end - 1e-3);
@@ -50,6 +53,11 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
     while (k < beats.length) {
       const half = si === biggest && beats[k] >= (sec.start + sec.end) / 2;
       let step = half ? peakBeats : unitBeats;
+      // Teaser: a burst of 1-beat flash cuts on the drop, then long holds again.
+      if (teaser && sec.type === "drop") {
+        const nIn = k; // beats into the drop
+        step = nIn < 4 ? 1 : 8;
+      }
       if (capcut && sec.type === "build") {
         const q = (beats[k] - sec.start) / Math.max(0.01, sec.end - sec.start);
         step = q > 0.75 ? 1 : q > 0.5 ? 2 : unitBeats; // accelerate into the drop
@@ -70,6 +78,9 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         const w = preset.transitions.within;
         transition = rand(seed * 91) < preset.reactive.glitch ? "glitch" : w[Math.floor(rand(seed * 17) * w.length)];
       }
+      if ((performance || teaser) && (style.transitionMode ?? "preset") === "preset" && index > 0) {
+        transition = teaser && sec.type === "drop" && bounds[j] - sec.start < beat * 4.5 ? "flash" : "crossfade";
+      }
       // CapCut rhythm transitions (unless the user picked a transition style).
       if (capcut && (style.transitionMode ?? "preset") === "preset" && index > 0) {
         if (sec.type === "drop") transition = j === 0 ? "flash" : "cut";
@@ -85,7 +96,7 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         transition = tm === "mix" ? ALL[(index + Math.floor(rand(seed * 41) * 3)) % ALL.length] : MODE[tm] ?? transition;
       }
       const transitionSeconds =
-        transition === "crossfade" ? Math.min((capcut ? 2 : preset.transitions.beats) * beat, (bounds[j + 1] - bounds[j]) * 0.5)
+        transition === "crossfade" ? Math.min((capcut || teaser ? 2 : performance ? 3 : preset.transitions.beats) * beat, (bounds[j + 1] - bounds[j]) * 0.5)
         : transition === "cut" ? 0
         : transition === "flash" ? beat * 0.75
         : transition === "whip_pan" ? Math.min(beat, (bounds[j + 1] - bounds[j]) * 0.5)
@@ -95,21 +106,24 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         : beat * 0.5;
 
       let clip: Segment["clip"] = null;
-      if (clips.length && usesClips(mode, sec.type)) {
-        const pool = clips.filter((c) => c.section === sec.type);
+      if (clips.length && (usesClips(mode, sec.type) || performance || teaser)) {
+        // Artist formats feature you: prefer your character clips everywhere.
+        const mine = clips.filter((c) => c.character);
+        const pool = (performance || teaser) && mine.length ? mine : clips.filter((c) => c.section === sec.type);
         const from = pool.length ? pool : clips;
         // Round-robin per section type so every clip gets used before any repeats.
         const n = clipUse.get(sec.type) ?? 0;
         clipUse.set(sec.type, n + 1);
         const ref = from[(n + si) % from.length];
         // Forward playback only (reversed AI footage looks wrong), gentle speed variety, slight crop.
-        const speeds = capcut ? [1] : [0.75, 1, 1, 1.25];
+        const speeds = capcut ? [1] : performance ? [0.6] : teaser ? [0.75] : [0.75, 1, 1, 1.25];
         const speed = speeds[Math.floor(rand(seed * 5) * speeds.length)];
         const segLen = bounds[j + 1] - bounds[j];
         clip = {
           ref,
           speed,
-          mirror: rand(seed * 11) < 0.2,
+          // never mirror footage of you (faces aren't symmetric, text on clothes flips)
+          mirror: !ref.character && rand(seed * 11) < 0.2,
           reverse: false,
           zoom: 1 + rand(seed * 19) * 0.06,
           // start where the cut can play through without looping

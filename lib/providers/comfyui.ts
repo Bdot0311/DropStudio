@@ -45,7 +45,14 @@ export function comfyProvider(baseUrl: string): Provider {
   }
 
   return {
-    generateImage: (r) => run(r, { prompt: r.prompt, negative: r.negative, seed: String(r.seed) }),
+    async generateImage(r) {
+      if (!r.referencePaths?.length) return run(r, { prompt: r.prompt, negative: r.negative, seed: String(r.seed) });
+      const form = new FormData();
+      form.append("image", new Blob([fs.readFileSync(r.referencePaths[0])]), path.basename(r.referencePaths[0]));
+      form.append("overwrite", "true");
+      const up = await call<{ name: string }>("/upload/image", { method: "POST", body: form });
+      return run(r, { prompt: r.prompt, negative: r.negative, seed: String(r.seed), image: up.name });
+    },
     async imageToVideo(r) {
       const form = new FormData();
       form.append("image", new Blob([fs.readFileSync(r.imagePath!)]), path.basename(r.imagePath!));

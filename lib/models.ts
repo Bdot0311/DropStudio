@@ -16,7 +16,7 @@ export type ModelDef = {
   fields?: Record<string, string>;
   output?: string;
 };
-export type ModelsConfig = { providers: Record<ProviderId, { label: string; image: ModelDef[]; image_to_video: ModelDef[] }> };
+export type ModelsConfig = { providers: Record<ProviderId, { label: string; image: ModelDef[]; image_to_video: ModelDef[]; character_image?: ModelDef[] }> };
 
 export function readModels(): ModelsConfig {
   return JSON.parse(fs.readFileSync(path.join(ROOT, "config", "models.json"), "utf8"));
@@ -36,6 +36,8 @@ export function selectedModels(provider = activeProvider()) {
   return {
     provider,
     image: pick(cfg.image, getSetting(`${provider}_image_model` as never)),
+    // Keyframes that feature the user's character use a reference-image model.
+    character: pick(cfg.character_image?.length ? cfg.character_image : cfg.image, getSetting(`${provider}_character_model` as never)),
     draft: pick(cfg.image_to_video, getSetting(`${provider}_video_draft` as never), "draft"),
     final: pick(cfg.image_to_video, getSetting(`${provider}_video_final` as never), "final"),
   };

@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { customAlphabet } from "nanoid";
 import { db, nowIso } from "./db";
-import { DATA_DIR } from "./paths";
+import { DATA_DIR, PROJECTS_DIR } from "./paths";
 import { presetConfig } from "./presets/configs";
-import { getProject, readMusicMap } from "./projects";
+import { getProject, listAssets, readMusicMap } from "./projects";
 import type { SectionType } from "./types";
 
 const newId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
@@ -16,7 +16,7 @@ export type ShotStatus =
 
 export type Shot = {
   id: string; project_id: string; idx: number; section_index: number; section_type: SectionType;
-  prompt: string; seed: number; clip_seed: number; status: ShotStatus; keyframe: string | null; clip: string | null;
+  prompt: string; seed: number; clip_seed: number; character: number; status: ShotStatus; keyframe: string | null; clip: string | null;
   clip_duration: number | null; error: string | null; updated_at: string;
 };
 
@@ -40,11 +40,36 @@ export function removeShot(id: string) {
   db().prepare("DELETE FROM shots WHERE id=?").run(id);
 }
 
-/** Full prompt sent to the model = shot prompt + the preset's look. */
-export function fullPrompt(projectId: string, shot: Pick<Shot, "prompt">): { prompt: string; negative: string } {
+/** The user's character reference photos (absolute paths), uploaded on the Upload step. */
+export function characterPaths(projectId: string): string[] {
+  return listAssets(projectId)
+    .filter((a) => a.kind === "character")
+    .map((a) => path.join(PROJECTS_DIR, projectId, a.filename))
+    .filter((f) => fs.existsSync(f));
+}
+
+/** Full prompt sent to the model = shot prompt + the preset's look. Character shots keep the
+ *  person from the reference photos (and drop the "no real people" negatives, since it's you). */
+export function fullPrompt(projectId: string, shot: Pick<Shot, "prompt"> & { character?: number }): { prompt: string; negative: string } {
   const p = presetConfig(getProject(projectId)?.preset ?? "melodic");
+  if (shot.character) {
+    const negative = p.negative.split(",").map((x) => x.trim()).filter((x) => !/real person|recognizable people|face of a real person/.test(x)).join(", ");
+    return {
+      prompt: `${shot.prompt}. Keep the exact face, hair, skin tone and identity of the person in the reference photo; same person, photorealistic. ${p.look}`,
+      negative,
+    };
+  }
   return { prompt: `${shot.prompt}, ${p.look}`, negative: p.negative };
 }
+
+/** Prompts that feature the user (the person in the reference photos). */
+const CHARACTER_PROMPTS: Record<SectionType, string[]> = {
+  intro: ["the person from the reference photo standing alone in silhouette against a vast {vibe} horizon, back to camera", "the person from the reference photo walking slowly through haze, {vibe}"],
+  build: ["close-up of the person from the reference photo, eyes closed, light flickering across their face, {vibe}", "the person from the reference photo looking up as light grows around them, {vibe}"],
+  drop: ["the person from the reference photo dancing with full energy, arms raised, {vibe}", "low-angle shot of the person from the reference photo performing, stage lights blazing behind them, {vibe}", "the person from the reference photo dancing in silhouette at a big window at sunset, {vibe}"],
+  breakdown: ["the person from the reference photo kneeling in mist, hood up, moody cinematic light, {vibe}", "the person from the reference photo standing still as light drifts around them, {vibe}"],
+  outro: ["the person from the reference photo walking away into the light, {vibe}"],
+};
 
 const nextIdx = (projectId: string) =>
   (db().prepare("SELECT COALESCE(MAX(idx),-1) AS m FROM shots WHERE project_id=?").get(projectId) as { m: number }).m + 1;
@@ -78,7 +103,12 @@ export function buildStoryboard(projectId: string, opts: { replace?: boolean; on
   const used: Record<string, number> = {};
   for (const x of existing) used[x.section_type] = (used[x.section_type] ?? 0) + 1;
   let idx = nextIdx(projectId);
-  const insert = db().prepare("INSERT INTO shots (id, project_id, idx, section_index, section_type, prompt, seed, status, updated_at) VALUES (?,?,?,?,?,?,?,?,?)");
+  const insert = db().prepare("INSERT INTO shots (id, project_id, idx, section_index, section_type, prompt, seed, status, updated_at, character) VALUES (?,?,?,?,?,?,?,?,?,?)");
+  // With character photos: performance/teaser formats feature you in every shot; otherwise every other shot.
+  const hasCharacter = characterPaths(projectId).length > 0;
+  const style = readStyleSafe(projectId);
+  const allCharacter = style === "performance" || style === "teaser";
+  let charN = 0;
   const angles = [", alternate angle", ", closer shot", ", wider shot", ", different moment"];
   sections.forEach((s, j) => {
     if (opts.onlyMissing && covered.has(s.i)) return;
@@ -88,8 +118,10 @@ export function buildStoryboard(projectId: string, opts: { replace?: boolean; on
       used[s.type] = u + 1;
       const t = templates[u % templates.length];
       const variation = u >= templates.length ? angles[Math.floor(u / templates.length - 1) % angles.length] : "";
-      const prompt = t.replace("{vibe}", vibe || "atmospheric") + variation;
-      insert.run(newId(), projectId, idx++, s.i, s.type, prompt, Math.floor(Math.random() * 2 ** 31), "draft", nowIso());
+      const character = hasCharacter && (allCharacter || charN++ % 2 === 0) ? 1 : 0;
+      const ct = CHARACTER_PROMPTS[s.type];
+      const prompt = (character ? ct[u % ct.length] : t).replace("{vibe}", vibe || "atmospheric") + variation;
+      insert.run(newId(), projectId, idx++, s.i, s.type, prompt, Math.floor(Math.random() * 2 ** 31), "draft", nowIso(), character);
     }
   });
   return listShots(projectId);
@@ -108,11 +140,11 @@ export function addShot(projectId: string, sectionIndex: number): Shot {
 }
 
 /** Ready clips for the editor (src is "cache/<file>", resolved to a URL by the caller). */
-export function listClipRefs(projectId: string) {
+export function listClipRefs(projectId: string): { id: string; src: string; duration: number; section: SectionType; character: boolean }[] {
   return listShots(projectId)
     // Any shot that has a clip file counts (a failed re-generation must not drop footage you already have).
     .filter((s) => s.status !== "rejected" && s.clip && fs.existsSync(path.join(DATA_DIR, s.clip)))
-    .map((s) => ({ id: s.id, src: s.clip!, duration: s.clip_duration ?? 5, section: s.section_type }));
+    .map((s) => ({ id: s.id, src: s.clip!, duration: s.clip_duration ?? 5, section: s.section_type, character: !!s.character }));
 }
 
 /** Which provider made a generated file ("cache/<key>.png|mp4"), from the generation cache. */
@@ -127,3 +159,13 @@ export function needsKeyframe(s: Shot, provider: string): boolean {
   if (s.status === "rejected" || /_(queued|running)$/.test(s.status)) return false;
   return !s.keyframe || (fileProvider(s.keyframe) ?? provider) !== provider;
 }
+
+function readStyleSafe(projectId: string): string {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(PROJECTS_DIR, projectId, "style.json"), "utf8")).editStyle ?? "clean";
+  } catch {
+    return "clean";
+  }
+}
+
+export { CHARACTER_PROMPTS };

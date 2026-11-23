@@ -48,6 +48,14 @@ On the **Style** page, **Edit style → CapCut** adds:
 
 It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Cut transitions can be switched to HyperFrames-style **whip pan** (one beat, motion blur) or **zoom through** (two beats, light sweep and RGB flicker), or a mix. The drop text can use HyperFrames' **shutter slam** (six beat-locked moves with real motion blur), and **light sweep** adds a key-light band across the frame every phrase. **Camera shake** uses HyperFrames' measured handheld/rig profiles (strength follows the music's loudness), and **beat accent** adds an impact flash, scale pulse and jolt on each drop or every bar of a drop. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
 
+### Your character and artist formats
+
+Upload 1–4 photos of yourself on the Upload step ("Your character"). Shots marked **★ You** on the Storyboard are generated with a reference-image model, FLUX Kontext Pro by default (≈$0.04 per image). You can pick Nano Banana or Ideogram Character in Settings. Image-to-video then animates you, so the same person appears across the clips. Never upload someone else's photos without their permission.
+
+Two artist-first formats (Style → Edit style), modelled on real artist posts:
+- **Performance:** long slow-motion shots of you with soft crossfades (no hard cuts), an optional 16:9 band inside the vertical frame, a small persistent top caption, and your lyric words one at a time in bold gold on the beat.
+- **Teaser:** long moody holds, a burst of 1-beat flash cuts on the drop, then a black release-date card and your @handle.
+
 ### Effects ported from HyperFrames (all on the Style page)
 
 | Group | Options |

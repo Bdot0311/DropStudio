@@ -164,7 +164,11 @@ export type StyleConfig = {
   useCover: boolean;
   debug: boolean; // beat/bar overlay for checking sync
   /** "clean" = preset look only; "capcut" = velocity surges, beat punches, strobes, captions. */
-  editStyle: "clean" | "capcut";
+  editStyle: "clean" | "capcut" | "performance" | "teaser";
+  /** "band" = a 16:9 picture band inside vertical videos with black above and below (lyric-video look). */
+  frame: "full" | "band";
+  /** Performance format: one lyric word every N beats. */
+  lyricBeats: number;
   /** Caption look in CapCut mode (ported HyperFrames styles, see remotion/captionStyles.tsx). */
   captionStyle: "slam" | "glitch" | "karaoke" | "neon" | "gradient" | "decode" | "highlight" | "clipwipe" | "blurin";
   /** Cut transitions: the preset's own, or HyperFrames-style whip pan / zoom through / a mix of both. */
@@ -185,11 +189,12 @@ export type StyleConfig = {
   waveform: "off" | "bars" | "mirror";
   letterbox: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
-  captions: { hook: string; drop: string; cta: string };
+  captions: { hook: string; drop: string; cta: string; top: string; lyrics: string; date: string; handle: string };
 };
 
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
   editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, cameraShake: "off", beatAccent: "off", cameraMove: "off",
-  looks: { flare: false, leaks: false, vhs: false, halftone: false }, waveform: "off", letterbox: false, captions: { hook: "", drop: "", cta: "OUT NOW" },
+  looks: { flare: false, leaks: false, vhs: false, halftone: false }, waveform: "off", letterbox: false, frame: "full", lyricBeats: 2,
+  captions: { hook: "", drop: "", cta: "OUT NOW", top: "", lyrics: "", date: "", handle: "" },
 };

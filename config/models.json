@@ -4,35 +4,287 @@
     "fal": {
       "label": "fal.ai",
       "image": [
-        { "id": "fal-ai/flux/schnell", "label": "FLUX.1 schnell (cheap drafts)", "price": { "per_image": 0.003 }, "input": { "image_size": "landscape_16_9", "num_inference_steps": 4, "num_images": 1, "enable_safety_checker": true }, "fields": { "prompt": "prompt", "seed": "seed" }, "output": "images.0.url" },
-        { "id": "fal-ai/flux/dev", "label": "FLUX.1 dev (better detail)", "price": { "per_image": 0.025 }, "input": { "image_size": "landscape_16_9", "num_images": 1, "enable_safety_checker": true }, "fields": { "prompt": "prompt", "seed": "seed" }, "output": "images.0.url" }
+        {
+          "id": "fal-ai/flux/schnell",
+          "label": "FLUX.1 schnell (cheap drafts)",
+          "price": {
+            "per_image": 0.003
+          },
+          "input": {
+            "image_size": "landscape_16_9",
+            "num_inference_steps": 4,
+            "num_images": 1,
+            "enable_safety_checker": true
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/flux/dev",
+          "label": "FLUX.1 dev (better detail)",
+          "price": {
+            "per_image": 0.025
+          },
+          "input": {
+            "image_size": "landscape_16_9",
+            "num_images": 1,
+            "enable_safety_checker": true
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        }
       ],
       "image_to_video": [
-        { "id": "fal-ai/wan-25-preview/image-to-video", "label": "Wan 2.5 480p (draft tier)", "tier": "draft", "price": { "per_second": 0.05 }, "clip_seconds": 5, "input": { "resolution": "480p", "duration": "5" }, "fields": { "prompt": "prompt", "image": "image_url", "negative": "negative_prompt", "seed": "seed" }, "output": "video.url" },
-        { "id": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video", "label": "Kling 2.5 Turbo Pro (final tier)", "tier": "final", "price": { "per_second": 0.07 }, "clip_seconds": 5, "input": { "duration": "5" }, "fields": { "prompt": "prompt", "image": "image_url", "negative": "negative_prompt" }, "output": "video.url" }
+        {
+          "id": "fal-ai/wan-25-preview/image-to-video",
+          "label": "Wan 2.5 480p (draft tier)",
+          "tier": "draft",
+          "price": {
+            "per_second": 0.05
+          },
+          "clip_seconds": 5,
+          "input": {
+            "resolution": "480p",
+            "duration": "5"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "negative": "negative_prompt",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
+          "label": "Kling 2.5 Turbo Pro (final tier)",
+          "tier": "final",
+          "price": {
+            "per_second": 0.07
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": "5"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "negative": "negative_prompt"
+          },
+          "output": "video.url"
+        }
+      ],
+      "character_image": [
+        {
+          "id": "fal-ai/flux-pro/kontext",
+          "label": "FLUX Kontext Pro (1 reference photo)",
+          "price": {
+            "per_image": 0.04
+          },
+          "input": {
+            "aspect_ratio": "16:9",
+            "num_images": 1,
+            "output_format": "png"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "reference": "image_url",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/nano-banana/edit",
+          "label": "Nano Banana (up to 4 reference photos, price approximate)",
+          "price": {
+            "per_image": 0.04
+          },
+          "input": {
+            "num_images": 1,
+            "output_format": "png"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "references": "image_urls"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/ideogram/character",
+          "label": "Ideogram Character (turbo, strongest likeness)",
+          "price": {
+            "per_image": 0.1
+          },
+          "input": {
+            "rendering_speed": "TURBO",
+            "image_size": "landscape_16_9",
+            "num_images": 1
+          },
+          "fields": {
+            "prompt": "prompt",
+            "references": "reference_image_urls",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        }
       ]
     },
     "replicate": {
       "label": "Replicate",
       "image": [
-        { "id": "black-forest-labs/flux-schnell", "label": "FLUX.1 schnell", "price": { "per_image": 0.003 }, "input": { "aspect_ratio": "16:9", "output_format": "png", "num_outputs": 1 }, "fields": { "prompt": "prompt", "seed": "seed" }, "output": "0" }
+        {
+          "id": "black-forest-labs/flux-schnell",
+          "label": "FLUX.1 schnell",
+          "price": {
+            "per_image": 0.003
+          },
+          "input": {
+            "aspect_ratio": "16:9",
+            "output_format": "png",
+            "num_outputs": 1
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "0"
+        }
       ],
       "image_to_video": [
-        { "id": "wan-video/wan-2.2-i2v-fast", "label": "Wan 2.2 i2v fast (draft tier, price approximate)", "tier": "draft", "price": { "per_video": 0.1 }, "clip_seconds": 5, "input": { "resolution": "480p" }, "fields": { "prompt": "prompt", "image": "image", "seed": "seed" }, "output": "" },
-        { "id": "kwaivgi/kling-v2.1", "label": "Kling 2.1 (final tier, price approximate)", "tier": "final", "price": { "per_second": 0.05 }, "clip_seconds": 5, "input": { "duration": 5 }, "fields": { "prompt": "prompt", "image": "start_image", "negative": "negative_prompt" }, "output": "" }
+        {
+          "id": "wan-video/wan-2.2-i2v-fast",
+          "label": "Wan 2.2 i2v fast (draft tier, price approximate)",
+          "tier": "draft",
+          "price": {
+            "per_video": 0.1
+          },
+          "clip_seconds": 5,
+          "input": {
+            "resolution": "480p"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image",
+            "seed": "seed"
+          },
+          "output": ""
+        },
+        {
+          "id": "kwaivgi/kling-v2.1",
+          "label": "Kling 2.1 (final tier, price approximate)",
+          "tier": "final",
+          "price": {
+            "per_second": 0.05
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": 5
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "start_image",
+            "negative": "negative_prompt"
+          },
+          "output": ""
+        }
+      ],
+      "character_image": [
+        {
+          "id": "black-forest-labs/flux-kontext-pro",
+          "label": "FLUX Kontext Pro (1 reference photo)",
+          "price": {
+            "per_image": 0.04
+          },
+          "input": {
+            "aspect_ratio": "16:9",
+            "output_format": "png"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "reference": "input_image",
+            "seed": "seed"
+          },
+          "output": ""
+        }
       ]
     },
     "comfyui": {
       "label": "Local ComfyUI (free)",
-      "image": [{ "id": "config/comfyui/image.json", "label": "Your image workflow (config/comfyui/image.json)", "price": { "per_image": 0 } }],
-      "image_to_video": [{ "id": "config/comfyui/image_to_video.json", "label": "Your image-to-video workflow (config/comfyui/image_to_video.json)", "tier": "draft", "price": { "per_video": 0 }, "clip_seconds": 5 }]
+      "image": [
+        {
+          "id": "config/comfyui/image.json",
+          "label": "Your image workflow (config/comfyui/image.json)",
+          "price": {
+            "per_image": 0
+          }
+        }
+      ],
+      "image_to_video": [
+        {
+          "id": "config/comfyui/image_to_video.json",
+          "label": "Your image-to-video workflow (config/comfyui/image_to_video.json)",
+          "tier": "draft",
+          "price": {
+            "per_video": 0
+          },
+          "clip_seconds": 5
+        }
+      ],
+      "character_image": [
+        {
+          "id": "config/comfyui/character.json",
+          "label": "Your character workflow (config/comfyui/character.json; {{image}} = first reference photo)",
+          "price": {
+            "per_image": 0
+          }
+        }
+      ]
     },
     "mock": {
       "label": "Test provider (free, fake footage)",
-      "image": [{ "id": "mock-image", "label": "Fake image (for testing, pretends $0.003)", "price": { "per_image": 0.003 } }],
+      "image": [
+        {
+          "id": "mock-image",
+          "label": "Fake image (for testing, pretends $0.003)",
+          "price": {
+            "per_image": 0.003
+          }
+        }
+      ],
       "image_to_video": [
-        { "id": "mock-video-draft", "label": "Fake clip (draft, pretends $0.05/s)", "tier": "draft", "price": { "per_second": 0.05 }, "clip_seconds": 5 },
-        { "id": "mock-video-final", "label": "Fake clip (final, pretends $0.07/s)", "tier": "final", "price": { "per_second": 0.07 }, "clip_seconds": 5 }
+        {
+          "id": "mock-video-draft",
+          "label": "Fake clip (draft, pretends $0.05/s)",
+          "tier": "draft",
+          "price": {
+            "per_second": 0.05
+          },
+          "clip_seconds": 5
+        },
+        {
+          "id": "mock-video-final",
+          "label": "Fake clip (final, pretends $0.07/s)",
+          "tier": "final",
+          "price": {
+            "per_second": 0.07
+          },
+          "clip_seconds": 5
+        }
+      ],
+      "character_image": [
+        {
+          "id": "mock-character",
+          "label": "Fake character image (pretends $0.04)",
+          "price": {
+            "per_image": 0.04
+          }
+        }
       ]
     }
   }

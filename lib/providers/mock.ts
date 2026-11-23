@@ -18,7 +18,13 @@ export function mockProvider(): Provider {
       const h = hue(r.prompt + r.seed);
       const c1 = `0x${Math.round(40 + 180 * h).toString(16).padStart(2, "0")}2060`;
       const c2 = `0x20${Math.round(60 + 160 * (1 - h)).toString(16).padStart(2, "0")}c0`;
-      await run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", `gradients=s=1024x576:c0=${c1}:c1=${c2}:x0=0:y0=0:x1=1024:y1=576:seed=${r.seed % 1000}`, "-frames:v", "1", out]);
+      if (r.referencePaths?.length) {
+        // Character shot: put the reference photo in the frame so it's obvious it was used.
+        await run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", `gradients=s=1024x576:c0=${c1}:c1=${c2}:x0=0:y0=0:x1=1024:y1=576:seed=${r.seed % 1000}`, "-i", r.referencePaths[0],
+          "-filter_complex", "[1:v]scale=-2:400[f];[0:v][f]overlay=(W-w)/2:(H-h)/2", "-frames:v", "1", out]);
+      } else {
+        await run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", `gradients=s=1024x576:c0=${c1}:c1=${c2}:x0=0:y0=0:x1=1024:y1=576:seed=${r.seed % 1000}`, "-frames:v", "1", out]);
+      }
       return { file: out };
     },
     async imageToVideo(r: GenRequest): Promise<GenResult> {

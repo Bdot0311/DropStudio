@@ -23,7 +23,12 @@ export function falProvider(key: string): Provider {
   }
 
   return {
-    generateImage: (r) => run(r, { prompt: r.prompt, negative: r.negative, seed: r.seed }),
+    generateImage: (r) =>
+      run(r, {
+        prompt: r.prompt, negative: r.negative, seed: r.seed,
+        reference: r.referencePaths?.length ? dataUri(r.referencePaths[0]) : undefined,
+        references: r.referencePaths?.length ? r.referencePaths.slice(0, 4).map(dataUri) : undefined,
+      }),
     imageToVideo: (r) => run(r, { prompt: r.prompt, negative: r.negative, seed: r.seed, image: dataUri(r.imagePath!) }),
   };
 }

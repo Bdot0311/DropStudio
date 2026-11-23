@@ -8,7 +8,7 @@ export async function GET() {
   const cfg = readModels();
   return json(
     Object.fromEntries(
-      Object.entries(cfg.providers).map(([id, p]) => [id, { label: p.label, image: p.image.map(({ id, label, price }) => ({ id, label, price })), video: p.image_to_video.map(({ id, label, price, tier, clip_seconds }) => ({ id, label, price, tier, clip_seconds })) }])
+      Object.entries(cfg.providers).map(([id, p]) => [id, { label: p.label, image: p.image.map(({ id, label, price }) => ({ id, label, price })), video: p.image_to_video.map(({ id, label, price, tier, clip_seconds }) => ({ id, label, price, tier, clip_seconds })), character: (p.character_image ?? []).map(({ id, label, price }) => ({ id, label, price })) }])
     )
   );
 }

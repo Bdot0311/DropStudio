@@ -9,6 +9,7 @@ import { whipPan, zoomThrough } from "./transitions";
 import { AccentFlash, LightSweep, accentHits, beatAccentAt, cameraShake } from "./fxPorts";
 import { AnamorphicFlare, HalftoneOverlay, OrganicLeaks, PixelateGrid, VhsOverlay, WaveformBars, cameraMove, chromaWipe, dirFromSeed, freezeCut, pushWipe, whiteThrough, zoomBlur } from "./fxPack";
 import { lastIndexAtOrBefore } from "./lib/music";
+import { ArtistCaptions } from "./artistCaptions";
 import { Captions, LightLeak, Letterbox, RgbSplitFilter, capcutCamera, clapSplit, isCapcut, velocityOffset } from "./EditFx";
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -63,8 +64,12 @@ export function Visual(props: Props) {
     colors: colors as [number, number, number][],
   });
 
+  // Artist formats (performance / teaser) and the 16:9 band inside vertical videos.
+  const artistFmt = style.editStyle === "performance" || style.editStyle === "teaser";
+  const band = style.frame === "band" && height > width;
+  const bandH = band ? Math.round((width * 9) / 16) : height;
   const glW = Math.round(width * (props.glScale ?? 1));
-  const glH = Math.round(height * (props.glScale ?? 1));
+  const glH = Math.round(bandH * (props.glScale ?? 1));
   const slot = (seg: Segment) => `${props.slotPrefix ?? ""}gl${seg.index % 2}`;
 
   // `tt` lets a transition draw a shot at another time (freeze-cut holds the outgoing shot still).
@@ -176,7 +181,9 @@ export function Visual(props: Props) {
   const sx = (rand(frame * 1.3) - 0.5) * shake, sy = (rand(frame * 2.1) - 0.5) * shake;
   const sec = map.sections[cur.section];
   const secProgress = clamp01((t - sec.start) / Math.max(0.01, sec.end - sec.start));
-  const grade = capcut && (cur.clip || prev?.clip)
+  const grade = artistFmt
+    ? "contrast(1.06) saturate(1.08)"
+    : capcut && (cur.clip || prev?.clip)
     ? `contrast(1.12) saturate(${sec.type === "breakdown" ? 1.0 : 1.22}) brightness(${sec.type === "breakdown" ? 0.92 : 1.02})`
     : sec.type === "drop" ? "saturate(1.15) contrast(1.08)"
     : sec.type === "breakdown" ? "saturate(0.8) brightness(0.88)"
@@ -184,7 +191,7 @@ export function Visual(props: Props) {
     : "saturate(0.92)";
   const usesClip = !!cur.clip || (prev?.clip && p < 1);
   // White kick flashes over real footage look cheap: keep them subtle on clips.
-  const kickFlash = Math.min(usesClip ? (capcut ? 0.06 : 0.12) : 1, kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1));
+  const kickFlash = Math.min(artistFmt ? (usesClip ? 0 : 0.15) : usesClip ? (capcut ? 0.06 : 0.12) : 1, kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1));
   // CapCut hard cut: a 2-frame flash frame on the cut.
   if (capcut && cur.transition === "cut" && prev && local < 2 / fps) flash = Math.max(flash, 0.35);
   const mv = cameraMove(style.cameraMove ?? "off", clamp01((t - cur.start) / Math.max(0.01, cur.end - cur.start)), cur.index, sec.type);
@@ -203,14 +210,15 @@ export function Visual(props: Props) {
   if (cam) flash = Math.min(1, flash + cam.strobe + cam.slam * 0.5);
 
   return (
-    <AbsoluteFill style={{ background: preset.background, overflow: "hidden" }}>
+    <AbsoluteFill style={{ background: band ? "#000" : preset.background, overflow: "hidden" }}>
       {rgb > 0 && <RgbSplitFilter id={rgbId} dx={rgb} />}
-      <AbsoluteFill style={{ transform: stackTransform, filter: stackFilter }}>
-        {layers}
-        {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} clean={capcut} />}
-      </AbsoluteFill>
-      {looks.halftone && <HalftoneOverlay width={width} height={height} />}
-      {looks.flare && (sec.type === "drop" || sec.type === "build") && <AnamorphicFlare t={t} kick={kick} energy={rms} width={width} height={height} seed={cur.section + 1} />}
+      <div style={band ? { position: "absolute", left: 0, right: 0, top: (height - bandH) / 2, height: bandH, overflow: "hidden", background: preset.background } : { position: "absolute", inset: 0 }}>
+        <AbsoluteFill style={{ transform: stackTransform, filter: stackFilter }}>
+          {layers}
+          {usesClip && <ClipTreatment preset={preset} colors={colors} frame={frame} grain={r.grain * k} clean={capcut || artistFmt} />}
+        </AbsoluteFill>
+      {looks.halftone && <HalftoneOverlay width={width} height={bandH} />}
+      {looks.flare && (sec.type === "drop" || sec.type === "build") && <AnamorphicFlare t={t} kick={kick} energy={rms} width={width} height={bandH} seed={cur.section + 1} />}
       {looks.leaks && <OrganicLeaks t={t} colors={colors} bpm={map.bpm} />}
       {props.style.useCover && props.coverSrc && (
         <AbsoluteFill style={{ transform: mv.fg }}>
@@ -218,16 +226,18 @@ export function Visual(props: Props) {
         </AbsoluteFill>
       )}
       {(capcut || looks.leaks) && <LightLeak map={map} t={t} colors={colors} />}
-      {style.waveform && style.waveform !== "off" && <WaveformBars map={map} t={t} width={width} height={height} colors={colors} mode={style.waveform} />}
-      {looks.vhs && <VhsOverlay t={t} frame={frame} height={height} clapHit={clapHit} />}
+      {style.waveform && style.waveform !== "off" && <WaveformBars map={map} t={t} width={width} height={bandH} colors={colors} mode={style.waveform} />}
+      {looks.vhs && <VhsOverlay t={t} frame={frame} height={bandH} clapHit={clapHit} />}
+      </div>
       {acc && <AccentFlash scale={acc.flashScale} opacity={0.45 * acc.flashOpacity * (1 - clamp01(flash + kickFlash))} color={colors[3].map((c) => Math.round(255 * (0.7 + 0.3 * c))).join(",")} />}
       {style.lightSweep && <LightSweep map={map} t={t} width={width} colors={colors} />}
-      {!capcut && <TitleLayer {...props} presetCfg={preset} />}
+      {!capcut && !artistFmt && <TitleLayer {...props} presetCfg={preset} />}
       {(flash > 0 || kickFlash > 0.01) && (
         <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
       )}
       {style.letterbox && <Letterbox />}
       {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} colors={colors} />}
+      {artistFmt && !props.noCaptions && <ArtistCaptions {...props} t={t} />}
       {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
     </AbsoluteFill>
   );

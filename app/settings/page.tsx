@@ -170,7 +170,7 @@ export default function SettingsPage() {
 
 type ModelOpt = { id: string; label: string; tier?: string };
 function ModelPickers({ provider, form, set }: { provider: string; form: Record<string, string>; set: (k: string) => (v: string) => void }) {
-  const { data } = useSWR<Record<string, { label: string; image: ModelOpt[]; video: ModelOpt[] }>>("/api/models", fetcher);
+  const { data } = useSWR<Record<string, { label: string; image: ModelOpt[]; video: ModelOpt[]; character: ModelOpt[] }>>("/api/models", fetcher);
   const p = data?.[provider];
   if (!p) return null;
   const pick = (key: string, label: string, list: ModelOpt[], tier?: string) => {
@@ -188,8 +188,9 @@ function ModelPickers({ provider, form, set }: { provider: string; form: Record<
     );
   };
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       {pick(`${provider}_image_model`, "Keyframe images", p.image)}
+      {p.character?.length > 0 && pick(`${provider}_character_model`, "Images featuring your character", p.character)}
       {pick(`${provider}_video_draft`, "Clips: draft tier", p.video, "draft")}
       {pick(`${provider}_video_final`, "Clips: final tier", p.video, "final")}
     </div>

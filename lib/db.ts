@@ -16,6 +16,10 @@ export function db(): DatabaseSync {
     const conn = new DatabaseSync(DB_PATH);
     conn.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 15000; PRAGMA foreign_keys = ON;");
     conn.exec(fs.readFileSync(SCHEMA_PATH, "utf8"));
+    // Additive migrations for databases created by older versions.
+    for (const sql of ["ALTER TABLE shots ADD COLUMN character INTEGER NOT NULL DEFAULT 0"]) {
+      try { conn.exec(sql); } catch { /* column already exists */ }
+    }
     globalThis.__dropDb = conn;
   }
   return globalThis.__dropDb;

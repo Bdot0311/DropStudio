@@ -34,7 +34,7 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (kind === "audio") {
     if (!AUDIO.includes(ext)) return error(`Unsupported audio format "${ext}". Use WAV, AIFF, MP3 or FLAC.`);
     filename = `source${ext}`;
-  } else if (kind === "cover" || kind === "photo") {
+  } else if (kind === "cover" || kind === "photo" || kind === "character") {
     if (!IMAGE.includes(ext)) return error(`Unsupported image format "${ext}". Use JPG, PNG or WebP.`);
     fs.mkdirSync(path.join(projectDir(id), "images"), { recursive: true });
     filename = `images/${kind}-${Date.now().toString(36)}-${name}`;
@@ -61,5 +61,5 @@ export async function PUT(req: Request, { params }: Ctx) {
     const updated = updateProject(id, { audio_file: filename, playback_file: null, status: "uploaded", bpm: null, musical_key: null });
     return json({ project: updated });
   }
-  return json({ asset: addAsset(id, kind as "cover" | "photo", filename) });
+  return json({ asset: addAsset(id, kind as "cover" | "photo" | "character", filename) });
 }

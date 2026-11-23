@@ -55,7 +55,7 @@ export type Project = {
   updated_at: string;
 };
 
-export type Asset = { id: string; project_id: string; kind: "cover" | "photo"; filename: string; created_at: string };
+export type Asset = { id: string; project_id: string; kind: "cover" | "photo" | "character"; filename: string; created_at: string };
 
 export type JobStatus = "queued" | "running" | "done" | "error" | "cancelled";
 export type Job = {

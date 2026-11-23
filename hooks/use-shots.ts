@@ -13,6 +13,7 @@ export type ShotsPayload = {
   cap: number;
   provider: { id: string; label: string };
   keys: { fal: boolean; replicate: boolean };
+  hasCharacter: boolean;
   prices: {
     image: { model: string; unit: number };
     draft: { model: string; unit: number; seconds: number };

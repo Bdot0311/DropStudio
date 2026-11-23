@@ -126,7 +126,7 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
           )}
 
           <div className={cn("grid gap-3", view === "grid" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4")}>
-            {shots.map((s) => <ShotCard key={s.id} shot={s} projectId={id} onChange={() => mutate()} compact={view === "grid"} />)}
+            {shots.map((s) => <ShotCard key={s.id} shot={s} projectId={id} onChange={() => mutate()} compact={view === "grid"} hasCharacter={data.hasCharacter} />)}
           </div>
 
           <div className="flex items-center justify-between rounded-lg border bg-card p-4 text-sm">

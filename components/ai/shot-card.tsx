@@ -37,7 +37,7 @@ export function ShotThumb({ shot, className }: { shot: Shot; className?: string 
   );
 }
 
-export function ShotCard({ shot, projectId, onChange, compact }: { shot: Shot; projectId: string; onChange: () => void; compact?: boolean }) {
+export function ShotCard({ shot, projectId, onChange, compact, hasCharacter }: { shot: Shot; projectId: string; onChange: () => void; compact?: boolean; hasCharacter?: boolean }) {
   const [prompt, setPrompt] = useState(shot.prompt);
   useEffect(() => setPrompt(shot.prompt), [shot.prompt]);
   const working = /_(queued|running)$/.test(shot.status);
@@ -59,6 +59,16 @@ export function ShotCard({ shot, projectId, onChange, compact }: { shot: Shot; p
         <div className="flex items-center gap-2">
           <Badge className="capitalize" style={{ background: SECTION_COLORS[shot.section_type].solid, color: "#0a0a0a" }}>{shot.section_type}</Badge>
           <span className="text-xs text-muted-foreground">#{shot.idx + 1}</span>
+          {hasCharacter && (
+            <button
+              disabled={working}
+              title={shot.character ? "This shot features you. Click for a scene-only shot." : "Click to feature you (your character photos) in this shot"}
+              onClick={() => patch({ character: !shot.character })}
+              className={cn("cursor-pointer rounded-full border px-2 py-0.5 text-[10px]", shot.character ? "border-primary bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
+            >
+              {shot.character ? "★ You" : "+ Feature me"}
+            </button>
+          )}
           <span className={cn("ml-auto text-xs", shot.status === "error" ? "text-destructive" : shot.status === "keyframe_ready" ? "text-warning" : "text-muted-foreground")}>{STATUS_LABEL[shot.status]}</span>
         </div>
         {!compact && (

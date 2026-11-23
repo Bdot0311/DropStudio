@@ -20,6 +20,7 @@ export type ClipRef = {
   src: string; // URL of an MP4
   duration: number; // seconds
   section: Section["type"]; // the section type it was generated for
+  character?: boolean; // features the user's character
 };
 
 export type VideoProps = {

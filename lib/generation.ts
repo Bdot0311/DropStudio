@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR } from "./paths";
 import { clipCost, imageCost, selectedModels, type ModelDef, type ProviderId } from "./models";
-import { fullPrompt, type Shot } from "./shots";
+import { characterPaths, fullPrompt, type Shot } from "./shots";
 import { cacheGet, cacheKey } from "./spend";
 
 export type Tier = "draft" | "final";
@@ -16,9 +16,16 @@ function fileHash(rel: string | null): string {
   return fs.existsSync(p) ? crypto.createHash("sha1").update(fs.readFileSync(p)).digest("hex").slice(0, 16) : rel;
 }
 
-export function keyframeKey(provider: ProviderId, model: ModelDef, shot: Shot): string {
+/** Character shots use the reference-image model; everything else the normal image model. */
+export function keyframeModel(m: ReturnType<typeof selectedModels>, shot: Shot): { model: ModelDef; refs: string[] } {
+  const refs = shot.character ? characterPaths(shot.project_id) : [];
+  return refs.length ? { model: m.character, refs } : { model: m.image, refs: [] };
+}
+
+export function keyframeKey(provider: ProviderId, model: ModelDef, shot: Shot, refs: string[] = []): string {
   const { prompt, negative } = fullPrompt(shot.project_id, shot);
-  return cacheKey({ kind: "image", provider, model: model.id, input: model.input ?? {}, prompt, negative, seed: shot.seed });
+  const refHash = refs.map((f) => crypto.createHash("sha1").update(fs.readFileSync(f)).digest("hex").slice(0, 12));
+  return cacheKey({ kind: "image", provider, model: model.id, input: model.input ?? {}, prompt, negative, seed: shot.seed, ...(refHash.length ? { refs: refHash } : {}) });
 }
 
 export function clipKey(provider: ProviderId, model: ModelDef, shot: Shot): string {
@@ -39,20 +46,30 @@ export type Estimate = {
 
 export function estimate(kind: "keyframes" | "clips", shots: Shot[], tier: Tier = "draft"): Estimate {
   const m = selectedModels();
-  const model = kind === "keyframes" ? m.image : m[tier];
-  const unit = kind === "keyframes" ? imageCost(model) : clipCost(model);
-  let cached = 0;
+  let model = kind === "keyframes" ? m.image : m[tier];
+  let unit = kind === "keyframes" ? imageCost(model) : clipCost(model);
+  let cached = 0, total = 0, withCharacter = 0;
   for (const s of shots) {
-    const key = kind === "keyframes" ? keyframeKey(m.provider, model, s) : clipKey(m.provider, model, s);
+    let key: string, u = unit;
+    if (kind === "keyframes") {
+      const km = keyframeModel(m, s);
+      key = keyframeKey(m.provider, km.model, s, km.refs);
+      u = imageCost(km.model);
+      if (km.refs.length) withCharacter++;
+    } else key = clipKey(m.provider, model, s);
     if (cacheGet(key)) cached++;
+    else total += u;
   }
+  if (kind === "keyframes" && withCharacter === shots.length && shots.length) { model = m.character; unit = imageCost(model); }
   const paid = shots.length - cached;
-  const total = paid * unit;
   const secs = model.clip_seconds ?? 5;
   const unitText =
     kind === "keyframes" ? `$${unit.toFixed(3)} each`
     : model.price.per_second !== undefined ? `${secs}s × $${model.price.per_second.toFixed(3)}/s`
     : `$${unit.toFixed(2)} each`;
-  const summary = `${paid} ${kind === "keyframes" ? "image" : "clip"}${paid === 1 ? "" : "s"} × ${unitText} ≈ $${total.toFixed(2)}${cached ? ` (${cached} already generated: free)` : ""}`;
-  return { kind, provider: m.provider, model: model.label, count: shots.length, cached, unitCost: unit, total, summary };
+  const mixed = kind === "keyframes" && withCharacter > 0 && withCharacter < shots.length;
+  const summary = mixed
+    ? `${paid} images (${withCharacter} featuring your character at $${imageCost(m.character).toFixed(3)}, the rest at $${imageCost(m.image).toFixed(3)}) ≈ $${total.toFixed(2)}${cached ? ` (${cached} already generated: free)` : ""}`
+    : `${paid} ${kind === "keyframes" ? "image" : "clip"}${paid === 1 ? "" : "s"} × ${unitText} ≈ $${total.toFixed(2)}${cached ? ` (${cached} already generated: free)` : ""}`;
+  return { kind, provider: m.provider, model: mixed ? `${m.character.label} + ${m.image.label}` : model.label, count: shots.length, cached, unitCost: unit, total, summary };
 }
