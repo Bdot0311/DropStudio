@@ -13,7 +13,9 @@ import { ShotCard } from "@/components/ai/shot-card";
 import { TimelineLane } from "@/components/ai/timeline-lane";
 import { jobActive, useShots } from "@/hooks/use-shots";
 import { useProject } from "@/hooks/use-project";
-import { api, cn } from "@/lib/utils";
+import { api, cn, fetcher } from "@/lib/utils";
+import useSWR from "swr";
+import { DEFAULT_WORLD } from "@/lib/director";
 
 export default function StoryboardStep({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -97,6 +99,7 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
               </button>
             ))}
           </div>
+          <StoryLook id={id} />
           <TimelineLane projectId={id} shots={shots} mode={data.mode} onAdd={async (i) => { await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "add", sectionIndex: i } }); mutate(); }} />
 
           {data.otherProviderKeyframes > 0 && (
@@ -105,7 +108,7 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => setConfirm(true)} disabled={!needKeyframes || jobActive(job)}>
               <Sparkles /> Generate {needKeyframes || ""} keyframe{needKeyframes === 1 ? "" : "s"}
-              {needKeyframes ? <span className="opacity-70">(~${(needKeyframes * data.prices.image.unit).toFixed(2)})</span> : null}
+              {needKeyframes ? <span className="opacity-70">(~${data.keyframeCost.toFixed(2)})</span> : null}
             </Button>
             {toReview.length > 0 && <Button variant="secondary" onClick={approveAll}><CheckCheck /> Approve all {toReview.length} to review</Button>}
             <Button variant="ghost" onClick={build} disabled={building}><Wand2 /> Rewrite storyboard</Button>
@@ -143,4 +146,32 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
 
 function confirmDialog(msg: string) {
   return typeof window !== "undefined" ? window.confirm(msg) : true;
+}
+
+function StoryLook({ id }: { id: string }) {
+  const { data, mutate } = useSWR<{ style: { director?: { world: string; wardrobe: string } }; preset: string }>(`/api/projects/${id}/style`, fetcher);
+  const [world, setWorld] = useState<string | null>(null);
+  const [wardrobe, setWardrobe] = useState<string | null>(null);
+  if (!data) return null;
+  const def = DEFAULT_WORLD[data.preset] ?? DEFAULT_WORLD.melodic;
+  const w = world ?? data.style.director?.world ?? "";
+  const r = wardrobe ?? data.style.director?.wardrobe ?? "";
+  const save = async () => {
+    await api(`/api/projects/${id}/style`, { method: "PUT", json: { style: { director: { world: w, wardrobe: r } } } });
+    mutate();
+    toast.success("Saved. Click Rewrite storyboard to apply it to every shot.");
+  };
+  return (
+    <div className="grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+      <label className="space-y-1 text-[11px] text-muted-foreground">
+        <span>Story world (every shot takes place here)</span>
+        <input value={w} placeholder={def.world} onChange={(e) => setWorld(e.target.value)} className="flex h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground" />
+      </label>
+      <label className="space-y-1 text-[11px] text-muted-foreground">
+        <span>Your wardrobe (kept the same in every shot)</span>
+        <input value={r} placeholder={def.wardrobe} onChange={(e) => setWardrobe(e.target.value)} className="flex h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground" />
+      </label>
+      <Button size="sm" variant="secondary" onClick={save}>Save look</Button>
+    </div>
+  );
 }

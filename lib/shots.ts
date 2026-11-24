@@ -7,6 +7,7 @@ import { DATA_DIR, PROJECTS_DIR } from "./paths";
 import { presetConfig } from "./presets/configs";
 import { getProject, listAssets, readMusicMap } from "./projects";
 import type { SectionType } from "./types";
+import { DEFAULT_WORLD, directShot } from "./director";
 
 const newId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
 
@@ -16,7 +17,7 @@ export type ShotStatus =
 
 export type Shot = {
   id: string; project_id: string; idx: number; section_index: number; section_type: SectionType;
-  prompt: string; seed: number; clip_seed: number; character: number; status: ShotStatus; keyframe: string | null; clip: string | null;
+  prompt: string; seed: number; clip_seed: number; character: number; shot_type: string; camera: string; vfx: string; status: ShotStatus; keyframe: string | null; clip: string | null;
   clip_duration: number | null; error: string | null; updated_at: string;
 };
 
@@ -103,11 +104,16 @@ export function buildStoryboard(projectId: string, opts: { replace?: boolean; on
   const used: Record<string, number> = {};
   for (const x of existing) used[x.section_type] = (used[x.section_type] ?? 0) + 1;
   let idx = nextIdx(projectId);
-  const insert = db().prepare("INSERT INTO shots (id, project_id, idx, section_index, section_type, prompt, seed, status, updated_at, character) VALUES (?,?,?,?,?,?,?,?,?,?)");
+  const insert = db().prepare("INSERT INTO shots (id, project_id, idx, section_index, section_type, prompt, seed, status, updated_at, character, shot_type, camera, vfx) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  const { world, wardrobe } = directorWorld(projectId, project.preset);
+  let globalN = existing.length;
+  // Count per section TYPE so repeated builds/drops keep rotating shot types, camera moves and VFX.
+  const perType: Record<string, number> = {};
+  for (const x of existing) perType[x.section_type] = (perType[x.section_type] ?? 0) + 1;
   // With character photos: performance/teaser formats feature you in every shot; otherwise every other shot.
   const hasCharacter = characterPaths(projectId).length > 0;
   const style = readStyleSafe(projectId);
-  const allCharacter = style === "performance" || style === "teaser";
+  const allCharacter = style === "performance" || style === "teaser" || style === "cinematic";
   let charN = 0;
   const angles = [", alternate angle", ", closer shot", ", wider shot", ", different moment"];
   sections.forEach((s, j) => {
@@ -119,9 +125,11 @@ export function buildStoryboard(projectId: string, opts: { replace?: boolean; on
       const t = templates[u % templates.length];
       const variation = u >= templates.length ? angles[Math.floor(u / templates.length - 1) % angles.length] : "";
       const character = hasCharacter && (allCharacter || charN++ % 2 === 0) ? 1 : 0;
-      const ct = CHARACTER_PROMPTS[s.type];
-      const prompt = (character ? ct[u % ct.length] : t).replace("{vibe}", vibe || "atmospheric") + variation;
-      insert.run(newId(), projectId, idx++, s.i, s.type, prompt, Math.floor(Math.random() * 2 ** 31), "draft", nowIso(), character);
+      void t; void variation;
+      const n = perType[s.type] ?? 0;
+      perType[s.type] = n + 1;
+      const d = directShot({ section: s.type, n, globalN: globalN++, character: !!character, vibe, world, wardrobe });
+      insert.run(newId(), projectId, idx++, s.i, s.type, d.prompt, Math.floor(Math.random() * 2 ** 31), "draft", nowIso(), character, d.shot_type, d.camera, d.vfx);
     }
   });
   return listShots(projectId);
@@ -158,6 +166,17 @@ export function fileProvider(rel: string | null): string | null {
 export function needsKeyframe(s: Shot, provider: string): boolean {
   if (s.status === "rejected" || /_(queued|running)$/.test(s.status)) return false;
   return !s.keyframe || (fileProvider(s.keyframe) ?? provider) !== provider;
+}
+
+/** The film's world + wardrobe (Storyboard → Story & look), falling back to the genre default. */
+export function directorWorld(projectId: string, preset: string): { world: string; wardrobe: string } {
+  const def = DEFAULT_WORLD[preset] ?? DEFAULT_WORLD.melodic;
+  try {
+    const d = JSON.parse(fs.readFileSync(path.join(PROJECTS_DIR, projectId, "style.json"), "utf8")).director ?? {};
+    return { world: d.world || def.world, wardrobe: d.wardrobe || def.wardrobe };
+  } catch {
+    return def;
+  }
 }
 
 function readStyleSafe(projectId: string): string {

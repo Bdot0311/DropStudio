@@ -41,9 +41,11 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
   const capcut = style.editStyle === "capcut";
   const performance = style.editStyle === "performance";
   const teaser = style.editStyle === "teaser";
+  // Cinematic (Higgsfield style): each AI shot plays its camera move from the start, cut on 2-bar lines.
+  const cinematic = style.editStyle === "cinematic";
   const CAPCUT_BEATS: Record<string, number> = { intro: 8, build: 4, drop: 2, breakdown: 8, outro: 8 };
   map.sections.forEach((sec, si) => {
-    const baseBeats = capcut ? CAPCUT_BEATS[sec.type] : performance || teaser ? 16 : preset.cutBeats[sec.type];
+    const baseBeats = capcut ? CAPCUT_BEATS[sec.type] : performance || teaser ? 16 : cinematic ? (sec.type === "drop" || sec.type === "build" ? 8 : 16) : preset.cutBeats[sec.type];
     const unitBeats = Math.max(1, Math.round(baseBeats / style.cutRate));
     const peakBeats = Math.max(1, Math.round((capcut ? 1 : preset.peakCutBeats) / style.cutRate));
     // Beat times inside this section; cuts land on beats counted from the section start (a downbeat).
@@ -78,6 +80,9 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         const w = preset.transitions.within;
         transition = rand(seed * 91) < preset.reactive.glitch ? "glitch" : w[Math.floor(rand(seed * 17) * w.length)];
       }
+      if (cinematic && (style.transitionMode ?? "preset") === "preset" && index > 0) {
+        transition = sec.type === "drop" && j === 0 ? "flash" : sec.type === "breakdown" || sec.type === "intro" ? "crossfade" : j === 0 ? "whip_pan" : "cut";
+      }
       if ((performance || teaser) && (style.transitionMode ?? "preset") === "preset" && index > 0) {
         transition = teaser && sec.type === "drop" && bounds[j] - sec.start < beat * 4.5 ? "flash" : "crossfade";
       }
@@ -106,28 +111,29 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
         : beat * 0.5;
 
       let clip: Segment["clip"] = null;
-      if (clips.length && (usesClips(mode, sec.type) || performance || teaser)) {
+      if (clips.length && (usesClips(mode, sec.type) || performance || teaser || cinematic)) {
         // Artist formats feature you: prefer your character clips everywhere.
         const mine = clips.filter((c) => c.character);
-        const pool = (performance || teaser) && mine.length ? mine : clips.filter((c) => c.section === sec.type);
+        const pool = (performance || teaser || cinematic) && mine.length ? mine : clips.filter((c) => c.section === sec.type);
         const from = pool.length ? pool : clips;
         // Round-robin per section type so every clip gets used before any repeats.
         const n = clipUse.get(sec.type) ?? 0;
         clipUse.set(sec.type, n + 1);
         const ref = from[(n + si) % from.length];
         // Forward playback only (reversed AI footage looks wrong), gentle speed variety, slight crop.
-        const speeds = capcut ? [1] : performance ? [0.6] : teaser ? [0.75] : [0.75, 1, 1, 1.25];
+        const speeds = capcut || cinematic ? [1] : performance ? [0.6] : teaser ? [0.75] : [0.75, 1, 1, 1.25];
         const speed = speeds[Math.floor(rand(seed * 5) * speeds.length)];
         const segLen = bounds[j + 1] - bounds[j];
         clip = {
           ref,
           speed,
           // never mirror footage of you (faces aren't symmetric, text on clothes flips)
-          mirror: !ref.character && rand(seed * 11) < 0.2,
+          mirror: !cinematic && !ref.character && rand(seed * 11) < 0.2,
           reverse: false,
-          zoom: 1 + rand(seed * 19) * 0.06,
+          zoom: cinematic ? 1 : 1 + rand(seed * 19) * 0.06,
           // start where the cut can play through without looping
-          offset: rand(seed * 23) * Math.max(0, ref.duration - 0.1 - segLen * speed),
+          // cinematic: start at the beginning so the AI camera move plays from its first frame
+          offset: cinematic ? 0 : rand(seed * 23) * Math.max(0, ref.duration - 0.1 - segLen * speed),
         };
       }
       segs.push({ index, start: bounds[j], end: bounds[j + 1], section: si, type: sec.type, scene, seed, transition, transitionSeconds, clip });

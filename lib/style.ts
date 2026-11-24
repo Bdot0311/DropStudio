@@ -18,8 +18,9 @@ export function writeStyle(projectId: string, style: Partial<StyleConfig>): Styl
   next.intensity = Math.min(1.5, Math.max(0, Number(next.intensity)));
   next.cutRate = Math.min(4, Math.max(0.25, Number(next.cutRate)));
   next.hueShift = Math.round(Number(next.hueShift) % 360);
-  next.editStyle = (["capcut", "performance", "teaser"] as const).includes(next.editStyle as never) ? next.editStyle : "clean";
+  next.editStyle = (["capcut", "performance", "teaser", "cinematic"] as const).includes(next.editStyle as never) ? next.editStyle : "clean";
   next.frame = next.frame === "band" ? "band" : "full";
+  next.director = { world: String(next.director?.world ?? "").slice(0, 300), wardrobe: String(next.director?.wardrobe ?? "").slice(0, 160) };
   next.lyricBeats = [1, 2, 4].includes(Number(next.lyricBeats)) ? Number(next.lyricBeats) : 2;
   next.letterbox = !!next.letterbox;
   if (!["preset", "whip", "zoom", "chroma", "push", "pixelate", "freeze", "white", "zoomblur", "mix"].includes(next.transitionMode)) next.transitionMode = "preset";

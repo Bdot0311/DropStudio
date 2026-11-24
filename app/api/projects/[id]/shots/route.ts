@@ -18,6 +18,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     mode: getProject(id)!.mode,
     shots,
     needKeyframes: shots.filter((s) => needsKeyframe(s, m.provider)).length,
+    keyframeCost: shots.filter((s) => needsKeyframe(s, m.provider)).reduce((a, s) => a + imageCost(s.character && characterPaths(id).length ? m.character : m.image), 0),
     otherProviderKeyframes: shots.filter((s) => s.keyframe && needsKeyframe(s, m.provider)).length,
     spent: projectSpend(id),
     cap: budgetCap(),
@@ -26,6 +27,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     hasCharacter: characterPaths(id).length > 0,
     prices: {
       image: { model: m.image.label, unit: imageCost(m.image) },
+      character: { model: m.character.label, unit: imageCost(m.character) },
       draft: { model: m.draft.label, unit: clipCost(m.draft), seconds: m.draft.clip_seconds ?? 5 },
       final: { model: m.final.label, unit: clipCost(m.final), seconds: m.final.clip_seconds ?? 5 },
     },

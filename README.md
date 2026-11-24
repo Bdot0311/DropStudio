@@ -48,6 +48,17 @@ On the **Style** page, **Edit style → CapCut** adds:
 
 It also adds kinetic captions: a hook that pops in word by word, a 3·2·1 countdown, drop text whose letters fly together on the drop, and an end card. Cut transitions can be switched to HyperFrames-style **whip pan** (one beat, motion blur) or **zoom through** (two beats, light sweep and RGB flicker), or a mix. The drop text can use HyperFrames' **shutter slam** (six beat-locked moves with real motion blur), and **light sweep** adds a key-light band across the frame every phrase. **Camera shake** uses HyperFrames' measured handheld/rig profiles (strength follows the music's loudness), and **beat accent** adds an impact flash, scale pulse and jolt on each drop or every bar of a drop. Captions come in six styles ported from [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0): kinetic slam, RGB glitch, karaoke pill, neon glow, gradient bounce and matrix decode.
 
+### The Director (Higgsfield / OpenArt-style shots)
+
+Every storyboard shot is designed like a music-video shot:
+- a **shot type**: extreme wide, close-up, low-angle hero, silhouette and so on;
+- a **camera move** for the video model: crash zoom, 360° orbit, bullet time, FPV dive, crane up, dolly zoom, push-through and more;
+- a **VFX moment**: particle burst, lightning, levitation, light trails, slow-mo wind, shattering glass, rain, smoke, lasers.
+
+All shots share one **story world and wardrobe**, which you can edit on the Storyboard. Keyframes get a cinematic still prompt, and the video model gets a separate motion prompt (camera + action + VFX). You can change the camera move or VFX per shot; only that clip is re-generated.
+
+Video models (Settings): **Kling 2.6 Pro** is the Final default (about $0.35 per 5 s clip). **Veo 3.1 Fast** and **Seedance 2.0** are premium options. The **Cinematic** format plays each clip's camera move at real speed, from its first frame, cut on 2-bar lines with a flash on the drop.
+
 ### Your character and artist formats
 
 Upload 1–4 photos of yourself on the Upload step ("Your character"). Shots marked **★ You** on the Storyboard are generated with a reference-image model, FLUX Kontext Pro by default (≈$0.04 per image). You can pick Nano Banana or Ideogram Character in Settings. Image-to-video then animates you, so the same person appears across the clips. Never upload someone else's photos without their permission.

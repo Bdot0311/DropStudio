@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/input";
 import { SECTION_COLORS } from "@/lib/grid";
 import { api, cn } from "@/lib/utils";
 import type { Shot } from "@/lib/shots";
+import { CAMERA_MOVES, SHOT_TYPES, VFX } from "@/lib/director";
 
 export const STATUS_LABEL: Record<Shot["status"], string> = {
   draft: "No keyframe yet",
@@ -79,6 +80,26 @@ export function ShotCard({ shot, projectId, onChange, compact, hasCharacter }: {
             onBlur={() => prompt !== shot.prompt && patch({ prompt })}
             className="min-h-[64px] text-xs"
           />
+        )}
+        {!compact && (
+          <div className="grid grid-cols-2 gap-1.5">
+            <label className="space-y-0.5 text-[10px] text-muted-foreground">
+              <span>Camera move</span>
+              <select disabled={working} value={shot.camera || ""} onChange={(e) => patch({ camera: e.target.value })} className="h-7 w-full cursor-pointer rounded-md border border-input bg-transparent px-1.5 text-[11px] text-foreground">
+                <option value="">—</option>
+                {CAMERA_MOVES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </label>
+            <label className="space-y-0.5 text-[10px] text-muted-foreground">
+              <span>VFX</span>
+              <select disabled={working} value={shot.vfx || "none"} onChange={(e) => patch({ vfx: e.target.value })} className="h-7 w-full cursor-pointer rounded-md border border-input bg-transparent px-1.5 text-[11px] text-foreground">
+                {VFX.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+        {compact && shot.camera && (
+          <div className="text-[10px] text-muted-foreground">{SHOT_TYPES.find((x) => x.id === shot.shot_type)?.label ?? ""} · {CAMERA_MOVES.find((x) => x.id === shot.camera)?.label}{shot.vfx && shot.vfx !== "none" ? ` · ${VFX.find((x) => x.id === shot.vfx)?.label}` : ""}</div>
         )}
         {shot.error && (
           <div className="flex gap-1.5 text-xs text-destructive"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />{shot.error}</div>

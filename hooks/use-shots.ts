@@ -8,6 +8,7 @@ export type ShotsPayload = {
   mode: "visualizer" | "montage" | "hybrid";
   shots: Shot[];
   needKeyframes: number;
+  keyframeCost: number;
   otherProviderKeyframes: number;
   spent: number;
   cap: number;

@@ -9,7 +9,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const { id, shotId } = await params;
   const shot = getShot(shotId);
   if (!shot || shot.project_id !== id) return error("Shot not found", 404);
-  const body = await readJson<{ prompt?: string; decision?: "approve" | "reject" | "undo"; reseed?: boolean; reseedClip?: boolean; character?: boolean }>(req);
+  const body = await readJson<{ prompt?: string; decision?: "approve" | "reject" | "undo"; reseed?: boolean; reseedClip?: boolean; character?: boolean; camera?: string; vfx?: string }>(req);
   const f: Parameters<typeof updateShot>[1] = {};
   if (typeof body.prompt === "string" && body.prompt.trim() && body.prompt !== shot.prompt) {
     f.prompt = body.prompt.trim().slice(0, 1000);
@@ -27,9 +27,19 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const { presetConfig } = await import("@/lib/presets/configs");
     const { getProject } = await import("@/lib/projects");
     const project = getProject(id)!;
-    const list = body.character ? CHARACTER_PROMPTS[shot.section_type] : presetConfig(project.preset).prompts[shot.section_type];
-    f.prompt = list[shot.idx % list.length].replace("{vibe}", project.vibe || "atmospheric");
+    const { directShot } = await import("@/lib/director");
+    const { directorWorld } = await import("@/lib/shots");
+    const w = directorWorld(id, project.preset);
+    f.prompt = directShot({ section: shot.section_type, n: shot.idx, globalN: shot.idx, character: !!body.character, vibe: project.vibe, world: w.world, wardrobe: w.wardrobe }).prompt;
+    void CHARACTER_PROMPTS; void presetConfig;
     Object.assign(f, { keyframe: null, clip: null, clip_duration: null, status: "draft" as ShotStatus, error: null });
+  }
+  // Changing the camera move or VFX only affects the clip (the keyframe still fits).
+  for (const k of ["camera", "vfx"] as const) {
+    if (typeof body[k] === "string" && body[k] !== shot[k]) {
+      f[k] = body[k]!.slice(0, 40);
+      if (shot.clip) Object.assign(f, { clip: null, clip_duration: null, status: "approved" as ShotStatus });
+    }
   }
   if (body.reseedClip && shot.keyframe) {
     f.clip_seed = shot.clip_seed + 1;

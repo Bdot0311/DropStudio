@@ -8,7 +8,7 @@ import { getProvider } from "../lib/providers";
 import { ProviderError, type GenResult } from "../lib/providers/types";
 import { fullPrompt, getShot, updateShot, type Shot } from "../lib/shots";
 import { assertBudget, BudgetError, cacheGet, cachePut, recordSpend } from "../lib/spend";
-import { clipKey, keyframeKey, keyframeModel, type Tier } from "../lib/generation";
+import { clipKey, clipPrompt, keyframeKey, keyframeModel, type Tier } from "../lib/generation";
 import { probe } from "../lib/ffmpeg";
 import type { Job } from "../lib/types";
 import type { Ctx } from "./render";
@@ -89,7 +89,7 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
         if (kind === "clips" && !fresh.keyframe) throw new ProviderError("This shot has no keyframe yet.", false);
         assertBudget(pid, itemUnit); // per item, so a batch can never overshoot the cap
         updateShot(shot.id, { status: kind === "keyframes" ? "keyframe_running" : "clip_running", error: null });
-        const { prompt, negative } = fullPrompt(pid, fresh);
+        const { prompt, negative } = kind === "clips" ? clipPrompt(fresh) : fullPrompt(pid, fresh);
         const req = {
           model: itemModel, prompt, negative, referencePaths: km.refs, seed: kind === "clips" ? fresh.seed + fresh.clip_seed : fresh.seed,
           imagePath: fresh.keyframe ? path.join(DATA_DIR, fresh.keyframe) : undefined,

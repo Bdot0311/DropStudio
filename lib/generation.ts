@@ -6,6 +6,7 @@ import path from "node:path";
 import { DATA_DIR } from "./paths";
 import { clipCost, imageCost, selectedModels, type ModelDef, type ProviderId } from "./models";
 import { characterPaths, fullPrompt, type Shot } from "./shots";
+import { motionPrompt } from "./director";
 import { cacheGet, cacheKey } from "./spend";
 
 export type Tier = "draft" | "final";
@@ -28,8 +29,15 @@ export function keyframeKey(provider: ProviderId, model: ModelDef, shot: Shot, r
   return cacheKey({ kind: "image", provider, model: model.id, input: model.input ?? {}, prompt, negative, seed: shot.seed, ...(refHash.length ? { refs: refHash } : {}) });
 }
 
+/** Image-to-video prompt: the Director's camera move + action + VFX (falls back to the still prompt). */
+export function clipPrompt(shot: Shot): { prompt: string; negative: string } {
+  const { negative } = fullPrompt(shot.project_id, shot);
+  const motion = motionPrompt(shot);
+  return { prompt: shot.character ? `${motion}. Keep the same person's face, hair and outfit throughout.` : motion, negative };
+}
+
 export function clipKey(provider: ProviderId, model: ModelDef, shot: Shot): string {
-  const { prompt, negative } = fullPrompt(shot.project_id, shot);
+  const { prompt, negative } = clipPrompt(shot);
   return cacheKey({ kind: "video", provider, model: model.id, input: model.input ?? {}, prompt, negative, seed: shot.seed, clipSeed: shot.clip_seed, image: fileHash(shot.keyframe) });
 }
 

@@ -17,7 +17,12 @@ export function db(): DatabaseSync {
     conn.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 15000; PRAGMA foreign_keys = ON;");
     conn.exec(fs.readFileSync(SCHEMA_PATH, "utf8"));
     // Additive migrations for databases created by older versions.
-    for (const sql of ["ALTER TABLE shots ADD COLUMN character INTEGER NOT NULL DEFAULT 0"]) {
+    for (const sql of [
+      "ALTER TABLE shots ADD COLUMN character INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE shots ADD COLUMN shot_type TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE shots ADD COLUMN camera TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE shots ADD COLUMN vfx TEXT NOT NULL DEFAULT ''",
+    ]) {
       try { conn.exec(sql); } catch { /* column already exists */ }
     }
     globalThis.__dropDb = conn;

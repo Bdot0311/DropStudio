@@ -65,7 +65,7 @@ export function Visual(props: Props) {
   });
 
   // Artist formats (performance / teaser) and the 16:9 band inside vertical videos.
-  const artistFmt = style.editStyle === "performance" || style.editStyle === "teaser";
+  const artistFmt = style.editStyle === "performance" || style.editStyle === "teaser" || style.editStyle === "cinematic";
   const band = style.frame === "band" && height > width;
   const bandH = band ? Math.round((width * 9) / 16) : height;
   const glW = Math.round(width * (props.glScale ?? 1));

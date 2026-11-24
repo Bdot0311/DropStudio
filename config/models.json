@@ -62,9 +62,28 @@
           "output": "video.url"
         },
         {
+          "id": "fal-ai/kling-video/v2.6/pro/image-to-video",
+          "label": "Kling 2.6 Pro (final tier, recommended)",
+          "tier": "final",
+          "price": {
+            "per_second": 0.07
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": "5",
+            "generate_audio": false
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "negative": "negative_prompt"
+          },
+          "output": "video.url"
+        },
+        {
           "id": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
           "label": "Kling 2.5 Turbo Pro (final tier)",
-          "tier": "final",
+          "tier": "final-alt",
           "price": {
             "per_second": 0.07
           },
@@ -76,6 +95,44 @@
             "prompt": "prompt",
             "image": "image_url",
             "negative": "negative_prompt"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/veo3.1/fast/image-to-video",
+          "label": "Veo 3.1 Fast (premium, ~$0.10-0.15/s)",
+          "tier": "premium",
+          "price": {
+            "per_second": 0.15
+          },
+          "clip_seconds": 8,
+          "input": {
+            "duration": "8s",
+            "generate_audio": false,
+            "resolution": "1080p"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "bytedance/seedance-2.0/image-to-video",
+          "label": "Seedance 2.0 (premium, ~$0.24/s)",
+          "tier": "premium",
+          "price": {
+            "per_second": 0.2419
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": "5",
+            "resolution": "720p"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "seed": "seed"
           },
           "output": "video.url"
         }
@@ -108,6 +165,23 @@
           "input": {
             "num_images": 1,
             "output_format": "png"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "references": "image_urls"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/nano-banana-pro/edit",
+          "label": "Nano Banana Pro (best likeness, up to 4 photos, price approximate)",
+          "price": {
+            "per_image": 0.15
+          },
+          "input": {
+            "num_images": 1,
+            "output_format": "png",
+            "aspect_ratio": "16:9"
           },
           "fields": {
             "prompt": "prompt",

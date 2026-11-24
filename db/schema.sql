@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS shots (
   seed          INTEGER NOT NULL,
   clip_seed     INTEGER NOT NULL DEFAULT 0,
   character     INTEGER NOT NULL DEFAULT 0,   -- 1 = feature the user's character (reference photos)
+  shot_type     TEXT NOT NULL DEFAULT '',    -- Director: wide, close_up, low_angle, …
+  camera        TEXT NOT NULL DEFAULT '',    -- Director: camera move for the video model
+  vfx           TEXT NOT NULL DEFAULT '',    -- Director: VFX moment
   -- draft | keyframe_queued | keyframe_running | keyframe_ready | approved | rejected
   -- | clip_queued | clip_running | clip_ready | error
   status        TEXT NOT NULL DEFAULT 'draft',

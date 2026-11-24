@@ -135,6 +135,18 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
             >
               Clean (preset look only)
             </Button>
+            <Button
+              onClick={() =>
+                setStyle((s) => ({
+                  ...s,
+                  editStyle: "cinematic", frame: "full", transitionMode: "preset", cameraMove: "off", cameraShake: "off", beatAccent: "drops",
+                  lightSweep: false, waveform: "off", letterbox: true, looks: { flare: false, leaks: false, vhs: false, halftone: false },
+                }))
+              }
+            >
+              Cinematic (Higgsfield / OpenArt style)
+            </Button>
+            <p className="text-[11px] text-muted-foreground">Each AI shot plays its full camera move (crash zoom, orbit, bullet time, FPV…) at real speed, cut on bar lines, with a flash on the drop. Best with Kling 2.6 Pro or Veo clips and your character.</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="secondary"
@@ -195,7 +207,7 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              {([["clean", "Clean", "Preset look only"], ["capcut", "CapCut", "Hype edit + captions"], ["performance", "Performance", "You on screen + lyric words"], ["teaser", "Teaser", "Moody holds, drop burst, date card"]] as const).map(([v, n, d]) => (
+              {([["clean", "Clean", "Preset look only"], ["capcut", "CapCut", "Hype edit + captions"], ["performance", "Performance", "You on screen + lyric words"], ["teaser", "Teaser", "Moody holds, drop burst, date card"], ["cinematic", "Cinematic", "Higgsfield-style AI camera moves"]] as const).map(([v, n, d]) => (
                 <button key={v} onClick={() => set("editStyle", v)} className={cn("cursor-pointer rounded-md border p-2.5 text-left", style.editStyle === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>
                   <div className="text-sm font-medium">{n}</div>
                   <div className="text-[11px] text-muted-foreground">{d}</div>

@@ -164,7 +164,9 @@ export type StyleConfig = {
   useCover: boolean;
   debug: boolean; // beat/bar overlay for checking sync
   /** "clean" = preset look only; "capcut" = velocity surges, beat punches, strobes, captions. */
-  editStyle: "clean" | "capcut" | "performance" | "teaser";
+  editStyle: "clean" | "capcut" | "performance" | "teaser" | "cinematic";
+  /** The Director's world + wardrobe for this film (empty = genre default). */
+  director?: { world: string; wardrobe: string };
   /** "band" = a 16:9 picture band inside vertical videos with black above and below (lyric-video look). */
   frame: "full" | "band";
   /** Performance format: one lyric word every N beats. */
