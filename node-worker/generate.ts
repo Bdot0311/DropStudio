@@ -6,7 +6,7 @@ import { DATA_DIR } from "../lib/paths";
 import { clipCost, imageCost, selectedModels, type ModelDef } from "../lib/models";
 import { getProvider } from "../lib/providers";
 import { ProviderError, type GenResult } from "../lib/providers/types";
-import { fullPrompt, getShot, updateShot, type Shot } from "../lib/shots";
+import { characterPaths, fullPrompt, getShot, updateShot, type Shot } from "../lib/shots";
 import { assertBudget, BudgetError, cacheGet, cachePut, recordSpend } from "../lib/spend";
 import { clipKey, clipPrompt, keyframeKey, keyframeModel, type Tier } from "../lib/generation";
 import { probe } from "../lib/ffmpeg";
@@ -71,7 +71,8 @@ async function generate(job: Job, ctx: Ctx, kind: Kind) {
     }
     const fresh = getShot(shot.id)!;
     // Character shots: reference-image model + your photos.
-    const km = kind === "keyframes" ? keyframeModel(m, fresh) : { model, refs: [] as string[] };
+    // Clips of you also send your photos, for models that take reference images (ignored by the rest).
+    const km = kind === "keyframes" ? keyframeModel(m, fresh) : { model, refs: fresh.character ? characterPaths(pid) : [] };
     const itemModel = km.model;
     const itemUnit = kind === "keyframes" ? imageCost(itemModel) : unit;
     const key = kind === "keyframes" ? keyframeKey(m.provider, itemModel, fresh, km.refs) : clipKey(m.provider, model, fresh);

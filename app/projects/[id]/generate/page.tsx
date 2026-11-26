@@ -10,6 +10,7 @@ import { CostMeter } from "@/components/ai/cost-meter";
 import { ProviderBanner } from "@/components/ai/provider-banner";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
 import { FinishingCard } from "@/components/ai/finishing";
+import { ModelLine } from "@/components/ai/model-browser";
 import { STATUS_LABEL, ShotThumb } from "@/components/ai/shot-card";
 import { jobActive, useShots } from "@/hooks/use-shots";
 import { SECTION_COLORS } from "@/lib/grid";
@@ -71,8 +72,8 @@ export default function GenerateStep({ params }: { params: Promise<{ id: string 
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground">{price.model}</p>
-              {tier === "draft" && <p className="text-[11px] text-warning">Draft clips are low resolution (480p) and look soft in a 1080p video. Use them to test the edit, then animate your keepers in Final for the release.</p>}
+              <ModelLine key={tier} label={tier === "draft" ? "Draft model" : "Final model"} role="video" slot={tier} current={price.model} onPicked={() => mutate()} disabled={data.provider.id !== "fal" ? "Switch to fal.ai to choose any model" : null} />
+              {tier === "draft" && <p className="text-[11px] text-warning">Draft models are cheaper and softer. Use them to test the edit, then animate your keepers in Final for the release.</p>}
               <Button className="w-full" onClick={() => setConfirm({})} disabled={!pending.length || jobActive(job)}>
                 <Clapperboard /> Animate {pending.length} clip{pending.length === 1 ? "" : "s"} (~${(pending.length * price.unit).toFixed(2)})
               </Button>

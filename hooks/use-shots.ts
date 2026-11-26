@@ -17,6 +17,7 @@ export type ShotsPayload = {
   hasCharacter: boolean;
   prices: {
     image: { model: string; unit: number };
+    character: { model: string; unit: number };
     draft: { model: string; unit: number; seconds: number };
     final: { model: string; unit: number; seconds: number };
   };

@@ -29,7 +29,11 @@ export function falProvider(key: string): Provider {
         reference: r.referencePaths?.length ? dataUri(r.referencePaths[0]) : undefined,
         references: r.referencePaths?.length ? r.referencePaths.slice(0, 4).map(dataUri) : undefined,
       }),
-    imageToVideo: (r) => run(r, { prompt: r.prompt, negative: r.negative, seed: r.seed, image: dataUri(r.imagePath!), end_image: r.endImagePath ? dataUri(r.endImagePath) : undefined }),
+    imageToVideo: (r) => run(r, {
+      prompt: r.prompt, negative: r.negative, seed: r.seed, image: dataUri(r.imagePath!), end_image: r.endImagePath ? dataUri(r.endImagePath) : undefined,
+      // reference-to-video models: the keyframe first, then up to 3 of your photos for likeness
+      images: [dataUri(r.imagePath!), ...(r.referencePaths ?? []).slice(0, 3).map(dataUri)],
+    }),
     upscaleVideo: (r) => run(r, { video: dataUri(r.videoPath!), seed: r.seed }),
     matteVideo: (r) => run(r, { video: dataUri(r.videoPath!) }),
   };

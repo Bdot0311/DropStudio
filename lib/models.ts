@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "./paths";
 import { getSetting } from "./settings";
+import { customDefs } from "./fal-catalog";
 
 export type ProviderId = "fal" | "replicate" | "comfyui" | "mock";
 export type ModelPrice = { per_image?: number; per_second?: number; per_video?: number; per_megapixel_frame?: number };
@@ -33,19 +34,30 @@ export function activeProvider(): ProviderId {
 
 /** The models the user picked in Settings (falls back to the first/tiered entry). */
 export function selectedModels(provider = activeProvider()) {
-  const cfg = readModels().providers[provider];
-  if (!cfg) throw new Error(`Unknown provider "${provider}"`);
+  const base = readModels().providers[provider];
+  if (!base) throw new Error(`Unknown provider "${provider}"`);
+  // fal: any model from fal's catalog you picked in the model browser, next to the curated ones.
+  const extra = (list: ModelDef[], role: "image" | "character" | "video") =>
+    provider === "fal" ? [...list, ...customDefs(role).filter((d) => !list.some((m) => m.id === d.id))] : list;
+  const cfg = {
+    ...base,
+    image: extra(base.image, "image"),
+    character_image: extra(base.character_image ?? [], "character"),
+    image_to_video: extra(base.image_to_video, "video"),
+  };
   const pick = (list: ModelDef[], id: string, tier?: string) =>
     list.find((m) => m.id === id) ?? list.find((m) => !tier || m.tier === tier) ?? list[0];
   return {
     provider,
     image: pick(cfg.image, getSetting(`${provider}_image_model` as never)),
     // Keyframes that feature the user's character use a reference-image model.
-    character: pick(cfg.character_image?.length ? cfg.character_image : cfg.image, getSetting(`${provider}_character_model` as never)),
+    character: pick(cfg.character_image.length ? cfg.character_image : cfg.image, getSetting(`${provider}_character_model` as never)),
     draft: pick(cfg.image_to_video, getSetting(`${provider}_video_draft` as never), "draft"),
     final: pick(cfg.image_to_video, getSetting(`${provider}_video_final` as never), "final"),
     // Finishing passes (only some providers offer them).
-    bridge: cfg.bridge?.[0] ?? null,
+    bridge: provider === "fal"
+      ? pick([...(base.bridge ?? []), ...customDefs("morph")], getSetting("fal_bridge_model" as never))
+      : cfg.bridge?.[0] ?? null,
     upscale: cfg.upscale?.[0] ?? null,
     matte: cfg.matte?.[0] ?? null,
   };

@@ -13,6 +13,7 @@ export const SETTINGS = {
   fal_video_draft: { secret: false, default: "", label: "fal draft video model" },
   fal_video_final: { secret: false, default: "", label: "fal final video model" },
   fal_character_model: { secret: false, default: "", label: "fal character image model" },
+  fal_bridge_model: { secret: false, default: "", label: "fal morph transition model" },
   replicate_character_model: { secret: false, default: "", label: "" },
   comfyui_character_model: { secret: false, default: "", label: "" },
   mock_character_model: { secret: false, default: "", label: "" },

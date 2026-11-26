@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { Eye, EyeOff, KeyRound, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ModelLine, type BrowserRole } from "@/components/ai/model-browser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,6 +195,25 @@ function ModelPickers({ provider, form, set }: { provider: string; form: Record<
     [`${provider}_video_final`, rec(p.video)],
   ];
   const usingBest = best.every(([k, id]) => !id || (form[k] || id) === id);
+  if (provider === "fal") {
+    const name = (list: ModelOpt[], key: string, tier?: string) => {
+      const id = form[key] || (list.find((m) => !tier || m.tier === tier) ?? list[0])?.id || "";
+      return list.find((m) => m.id === id)?.label ?? id;
+    };
+    const line = (key: string, label: string, role: BrowserRole, list: ModelOpt[], slot?: "draft" | "final") => (
+      <ModelLine label={label} role={role} slot={slot} current={name(list, key, slot)} onPicked={(id) => set(key)(id)} />
+    );
+    return (
+      <div className="space-y-2 rounded-md border p-3">
+        <p className="text-[11px] text-muted-foreground">Pick from every model on fal.ai (Kling, Veo, Seedance, Hailuo, MiniMax, FLUX, Nano Banana…). Changes apply right away.</p>
+        {!usingBest && <div className="flex items-center gap-2 text-xs"><span className="text-muted-foreground">You&apos;ve picked cheaper models.</span><Button size="sm" variant="secondary" className="ml-auto h-6" onClick={() => best.forEach(([k, id]) => id && set(k)(id))}>Use recommended</Button></div>}
+        {line(`${provider}_image_model`, "Keyframe images", "image", p.image)}
+        {line(`${provider}_character_model`, "Images of you", "character", p.character ?? [])}
+        {line(`${provider}_video_draft`, "Clips · draft", "video", p.video, "draft")}
+        {line(`${provider}_video_final`, "Clips · final", "video", p.video, "final")}
+      </div>
+    );
+  }
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {best.some(([, id]) => id) && (

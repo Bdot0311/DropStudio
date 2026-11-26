@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
+import { ModelLine } from "@/components/ai/model-browser";
 import { api, fetcher } from "@/lib/utils";
 import type { Job } from "@/lib/types";
 
@@ -15,7 +16,7 @@ type Payload = { passes: Record<"bridge" | "upscale" | "matte", Pass>; style: { 
 const active = (j: Job | null) => !!j && (j.status === "queued" || j.status === "running");
 
 const PASSES = [
-  { kind: "bridge" as const, icon: Shuffle, title: "AI morph transitions", text: "Each section change melts from one shot into the next over 2 bars, landing on the drop (Wan 2.2 first→last frame)." },
+  { kind: "bridge" as const, icon: Shuffle, title: "AI morph transitions", text: "Each section change melts from one shot into the next over 2 bars, landing on the drop (any first→last-frame model)." },
   { kind: "upscale" as const, icon: Maximize2, title: "Upscale draft clips to 1080p", text: "Sharpens low-resolution clips with SeedVR2, so Draft-tier footage holds up in a 1080p video." },
   { kind: "matte" as const, icon: Scissors, title: "Captions behind you", text: "Cuts the subject out of every clip, so the drop text sits behind you (BiRefNet)." },
 ];
@@ -53,6 +54,7 @@ export function FinishingCard({ projectId, onDone }: { projectId: string; onDone
                 {p.total > 0 && <span className="ml-auto font-normal text-muted-foreground">{p.done}/{p.total} done</span>}
               </div>
               <p className="text-[11px] text-muted-foreground">{text}</p>
+              {kind === "bridge" && p.model && <ModelLine label="Model" role="morph" current={p.model} onPicked={() => mutate()} disabled={p.unavailable ? " " : null} />}
               {p.unavailable ? (
                 <p className="text-[11px] text-warning">{p.unavailable}</p>
               ) : (

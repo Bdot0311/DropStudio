@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { CostMeter } from "@/components/ai/cost-meter";
 import { ProviderBanner } from "@/components/ai/provider-banner";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
+import { ModelLine } from "@/components/ai/model-browser";
 import { ShotCard } from "@/components/ai/shot-card";
 import { TimelineLane } from "@/components/ai/timeline-lane";
 import { jobActive, useShots } from "@/hooks/use-shots";
@@ -100,6 +101,10 @@ export default function StoryboardStep({ params }: { params: Promise<{ id: strin
             ))}
           </div>
           <StoryLook id={id} />
+          <div className="space-y-1.5 rounded-lg border bg-card px-4 py-2.5">
+            <ModelLine label="Keyframe model" role="image" current={data.prices.image.model} onPicked={() => mutate()} disabled={data.provider.id !== "fal" ? "Switch to fal.ai in Settings to choose from every model" : null} />
+            {data.hasCharacter && <ModelLine label="Shots of you" role="character" current={data.prices.character.model} onPicked={() => mutate()} disabled={data.provider.id !== "fal" ? " " : null} />}
+          </div>
           <TimelineLane projectId={id} shots={shots} mode={data.mode} onAdd={async (i) => { await api(`/api/projects/${id}/shots`, { method: "POST", json: { action: "add", sectionIndex: i } }); mutate(); }} />
 
           {data.otherProviderKeyframes > 0 && (
