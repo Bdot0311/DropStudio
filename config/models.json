@@ -38,6 +38,42 @@
             "seed": "seed"
           },
           "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/z-image/turbo",
+          "label": "Z-Image Turbo (open model, sharp + very cheap)",
+          "price": {
+            "per_image": 0.003
+          },
+          "input": {
+            "image_size": "landscape_16_9",
+            "num_images": 1,
+            "num_inference_steps": 8,
+            "enable_safety_checker": true
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/qwen-image",
+          "label": "Qwen-Image (best at text/signs in the image)",
+          "price": {
+            "per_image": 0.012
+          },
+          "input": {
+            "image_size": "landscape_16_9",
+            "num_images": 1,
+            "enable_safety_checker": true
+          },
+          "fields": {
+            "prompt": "prompt",
+            "negative": "negative_prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
         }
       ],
       "image_to_video": [
@@ -52,6 +88,29 @@
           "input": {
             "resolution": "480p",
             "duration": "5"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "negative": "negative_prompt",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/wan/v2.2-a14b/image-to-video",
+          "label": "Wan 2.2 A14B 720p (open model, cheaper draft)",
+          "tier": "draft-alt",
+          "price": {
+            "per_second": 0.08
+          },
+          "clip_seconds": 5,
+          "input": {
+            "resolution": "720p",
+            "num_frames": 81,
+            "frames_per_second": 16,
+            "interpolator_model": "film",
+            "num_interpolated_frames": 1
           },
           "fields": {
             "prompt": "prompt",
@@ -203,6 +262,25 @@
           "fields": {
             "prompt": "prompt",
             "references": "reference_image_urls",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/qwen-image-edit",
+          "label": "Qwen-Image-Edit (1 reference photo, ~$0.03, approximate)",
+          "price": {
+            "per_image": 0.03
+          },
+          "input": {
+            "image_size": "landscape_16_9",
+            "num_images": 1,
+            "output_format": "png"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "reference": "image_url",
+            "negative": "negative_prompt",
             "seed": "seed"
           },
           "output": "images.0.url"
