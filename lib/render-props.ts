@@ -3,7 +3,8 @@ import { readMusicMap, listAssets, getProject } from "./projects";
 import { readStyle } from "./style";
 import type { MusicMap, Project } from "./types";
 import type { ClipRef, LiteMap, VideoProps } from "../remotion/types";
-import { listClipRefs } from "./shots";
+import { listClipRefs, listShots } from "./shots";
+import { enhancementIndex } from "./enhance";
 
 export function liteMap(m: MusicMap): LiteMap {
   const e = m.envelopes;
@@ -40,7 +41,16 @@ export function buildVideoProps(projectId: string, o: PropsOptions): { props: Vi
   if (!map) throw new Error("Analyze the track first");
   const style = readStyle(projectId);
   const cover = listAssets(projectId).find((a) => a.kind === "cover");
-  const clips: ClipRef[] = project.mode === "visualizer" ? [] : listClipRefs(projectId).map((c) => ({ ...c, src: o.assetUrl(c.src) }));
+  const clips: ClipRef[] = project.mode === "visualizer" ? [] : listClipRefs(projectId).map(({ matte, ...c }) => ({ ...c, src: o.assetUrl(c.src), ...(matte && style.textBehind ? { matteSrc: o.assetUrl(matte) } : {}) }));
+  // AI morphs whose inputs still match the current clips (the timeline decides where they play).
+  const ix = enhancementIndex(projectId);
+  const shots = new Map(listShots(projectId).map((s) => [s.id, s]));
+  const bridges = clips.length && style.morph && style.morph !== "off"
+    ? ix.all.filter((e) => e.kind === "bridge").flatMap((e) => {
+        const a = shots.get(e.shot_id), b = shots.get(e.to_shot_id);
+        return a && b && ix.bridgeOf(a, b) ? [{ from: e.shot_id, to: e.to_shot_id, src: o.assetUrl(e.file), duration: e.duration ?? 5 }] : [];
+      })
+    : [];
   const startTime = o.startTime ?? 0;
   const props: VideoProps = {
     map: liteMap(map),
@@ -52,6 +62,7 @@ export function buildVideoProps(projectId: string, o: PropsOptions): { props: Vi
     audioSrc: o.withAudio && project.playback_file ? o.assetUrl(project.playback_file) : null,
     coverSrc: cover ? o.assetUrl(cover.filename) : null,
     clips,
+    bridges,
     fps: o.fps ?? 30,
     width: o.width ?? 1920,
     height: o.height ?? 1080,

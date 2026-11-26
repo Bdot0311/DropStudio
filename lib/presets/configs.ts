@@ -3,7 +3,7 @@
 import type { SectionType } from "../types";
 
 export type SceneId = "tunnel" | "particles" | "liquid" | "lasers" | "terrain" | "kaleido";
-export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom" | "whip_pan" | "zoom_through" | "chroma_wipe" | "push_wipe" | "pixelate" | "freeze_cut" | "white_through" | "zoom_blur";
+export type TransitionId = "crossfade" | "cut" | "flash" | "whip" | "glitch" | "zoom" | "whip_pan" | "zoom_through" | "chroma_wipe" | "push_wipe" | "pixelate" | "freeze_cut" | "white_through" | "zoom_blur" | "morph";
 
 export type PresetConfig = {
   id: "melodic" | "tech_house" | "techno" | "future_rave";
@@ -190,6 +190,10 @@ export type StyleConfig = {
   /** Equalizer overlay driven by the track. */
   waveform: "off" | "bars" | "mirror";
   letterbox: boolean;
+  /** AI morph transitions (first→last-frame clips) into every section change, only into drops, or off. */
+  morph?: "off" | "sections" | "drops";
+  /** Captions sit behind you: the subject is cut out of each clip and drawn over the text. */
+  textBehind?: boolean;
   /** Kinetic captions (CapCut mode). Empty hook = "Artist – Title"; empty drop = no drop text. */
   captions: { hook: string; drop: string; cta: string; top: string; lyrics: string; date: string; handle: string };
 };
@@ -197,6 +201,6 @@ export type StyleConfig = {
 export const DEFAULT_STYLE: StyleConfig = {
   intensity: 1, cutRate: 1, hueShift: 0, titleCard: true, useCover: true, debug: false,
   editStyle: "clean", captionStyle: "slam", transitionMode: "preset", dropAnimation: "explode", lightSweep: false, cameraShake: "off", beatAccent: "off", cameraMove: "off",
-  looks: { flare: false, leaks: false, vhs: false, halftone: false }, waveform: "off", letterbox: false, frame: "full", lyricBeats: 2,
+  looks: { flare: false, leaks: false, vhs: false, halftone: false }, waveform: "off", letterbox: false, frame: "full", lyricBeats: 2, morph: "off", textBehind: false,
   captions: { hook: "", drop: "", cta: "OUT NOW", top: "", lyrics: "", date: "", handle: "" },
 };

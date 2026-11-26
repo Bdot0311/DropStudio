@@ -9,6 +9,10 @@ export type GenRequest = {
   imagePath?: string;
   /** Character reference photos (local paths) for reference-image models. */
   referencePaths?: string[];
+  /** First→last-frame video (AI morph between two shots): local path of the last frame. */
+  endImagePath?: string;
+  /** Upscale / cut-out: local path of the input video. */
+  videoPath?: string;
   /** Called with a short status line while waiting on the provider. */
   onStatus?: (s: string) => void;
   signal?: AbortSignal;
@@ -20,6 +24,10 @@ export type GenResult = { url?: string; file?: string };
 export interface Provider {
   generateImage(r: GenRequest): Promise<GenResult>;
   imageToVideo(r: GenRequest): Promise<GenResult>;
+  /** Video → higher-resolution video. */
+  upscaleVideo?(r: GenRequest): Promise<GenResult>;
+  /** Video → black/white subject mask video (same length). */
+  matteVideo?(r: GenRequest): Promise<GenResult>;
 }
 
 export class ProviderError extends Error {

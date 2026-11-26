@@ -102,3 +102,19 @@ CREATE TABLE IF NOT EXISTS gen_cache (
   duration   REAL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+
+-- Finishing passes on top of clips: AI morph transitions between two shots ("bridge"),
+-- 1080p upscales ("upscale") and subject cut-outs for text-behind-you ("matte").
+-- `source` records the input files; a result is only used while its source still matches.
+CREATE TABLE IF NOT EXISTS enhancements (
+  id          TEXT PRIMARY KEY,
+  project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL,        -- bridge | upscale | matte
+  shot_id     TEXT NOT NULL,
+  to_shot_id  TEXT NOT NULL DEFAULT '',
+  source      TEXT NOT NULL,
+  file        TEXT NOT NULL,        -- "cache/<key>.mp4|webm"
+  duration    REAL,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (project_id, kind, shot_id, to_shot_id)
+);

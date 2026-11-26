@@ -11,7 +11,7 @@ import { cacheGet, cacheKey } from "./spend";
 
 export type Tier = "draft" | "final";
 
-function fileHash(rel: string | null): string {
+export function fileHash(rel: string | null): string {
   if (!rel) return "";
   const p = path.join(DATA_DIR, rel);
   return fs.existsSync(p) ? crypto.createHash("sha1").update(fs.readFileSync(p)).digest("hex").slice(0, 16) : rel;

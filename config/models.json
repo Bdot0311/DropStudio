@@ -285,6 +285,70 @@
           },
           "output": "images.0.url"
         }
+      ],
+      "bridge": [
+        {
+          "id": "fal-ai/wan/v2.2-a14b/image-to-video",
+          "label": "Wan 2.2 A14B first\u2192last frame (720p)",
+          "price": {
+            "per_second": 0.08
+          },
+          "clip_seconds": 5,
+          "input": {
+            "resolution": "720p",
+            "num_frames": 81,
+            "frames_per_second": 16,
+            "interpolator_model": "film",
+            "num_interpolated_frames": 1
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "end_image": "end_image_url",
+            "negative": "negative_prompt",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        }
+      ],
+      "upscale": [
+        {
+          "id": "fal-ai/seedvr/upscale/video",
+          "label": "SeedVR2 video upscale to 1080p",
+          "price": {
+            "per_megapixel_frame": 0.001
+          },
+          "input": {
+            "upscale_mode": "target",
+            "target_resolution": "1080p",
+            "output_quality": "high"
+          },
+          "target_height": 1080,
+          "fields": {
+            "video": "video_url",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        }
+      ],
+      "matte": [
+        {
+          "id": "fal-ai/birefnet/v2/video",
+          "label": "BiRefNet video cut-out (approximate price)",
+          "price": {
+            "per_video": 0.03
+          },
+          "input": {
+            "output_mask": true,
+            "model": "Matting",
+            "refine_foreground": true,
+            "video_output_type": "X264 (.mp4)"
+          },
+          "fields": {
+            "video": "video_url"
+          },
+          "output": "mask_video.url"
+        }
       ]
     },
     "replicate": {
@@ -435,6 +499,35 @@
           "label": "Fake character image (pretends $0.04)",
           "price": {
             "per_image": 0.04
+          }
+        }
+      ],
+      "bridge": [
+        {
+          "id": "mock-bridge",
+          "label": "Test morph (placeholder)",
+          "price": {
+            "per_second": 0.08
+          },
+          "clip_seconds": 5
+        }
+      ],
+      "upscale": [
+        {
+          "id": "mock-upscale",
+          "label": "Test upscale (FFmpeg)",
+          "price": {
+            "per_megapixel_frame": 0.001
+          },
+          "target_height": 1080
+        }
+      ],
+      "matte": [
+        {
+          "id": "mock-matte",
+          "label": "Test cut-out (centre oval)",
+          "price": {
+            "per_video": 0.03
           }
         }
       ]

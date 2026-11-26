@@ -59,6 +59,18 @@ All shots share one **story world and wardrobe**, which you can edit on the Stor
 
 Video models (Settings): **Kling 2.6 Pro** is the Final default (about $0.35 per 5 s clip). **Veo 3.1 Fast** and **Seedance 2.0** are premium options. Open models from fal are also in the menus: **Z-Image Turbo** and **Qwen-Image** for keyframes, **Qwen-Image-Edit** for character shots, and **Wan 2.2 A14B 720p** as a sharper Draft tier. The **Cinematic** format plays each clip's camera move at real speed, from its first frame, cut on 2-bar lines with a flash on the drop.
 
+### Finishing touches (Generate step)
+
+Three optional paid passes on top of your clips. Each shows its cost first, and finished results are cached:
+
+| Pass | What it does | Model (fal) | Cost |
+|---|---|---|---|
+| **AI morph transitions** | The last 2 bars before a section change melt from one shot into the next, landing on the drop. Switch on in Style → *AI morph transitions* (into drops, or every section). | Wan 2.2 A14B first→last frame | ≈ $0.40 per morph |
+| **Upscale to 1080p** | Sharpens Draft-tier (480p/720p) clips so they hold up in a 1080p video. Clips that are already sharp are skipped. | SeedVR2 | ≈ $0.25 per 5 s clip |
+| **Captions behind you** | Cuts the subject out of every clip, so the drop text and captions sit behind you. Switch on in Style → *Captions behind you*. | BiRefNet video | ≈ $0.03 per clip (approximate) |
+
+If you regenerate a clip, its old upscale, cut-out and morphs are retired automatically. Safari can't preview transparent video, so the text-behind effect shows in the rendered file (and in Chrome previews), not in Safari's preview.
+
 ### Your character and artist formats
 
 Upload 1–4 photos of yourself on the Upload step ("Your character"). Shots marked **★ You** on the Storyboard are generated with a reference-image model, FLUX Kontext Pro by default (≈$0.04 per image). You can pick Nano Banana or Ideogram Character in Settings. Image-to-video then animates you, so the same person appears across the clips. Never upload someone else's photos without their permission.
@@ -114,6 +126,7 @@ Two artist-first formats (Style → Edit style), modelled on real artist posts:
 | `npm test` | Phase 1: on the 128 BPM test track (WAV and MP3), BPM reads 128 ± 0.5, and the breakdown and drop are within 1 bar. |
 | `npm run check:sync -- <video.mp4> <music_map.json>` | Phase 2: every kick flash lands on the exact frame of its kick, and audio matches video to the last frame. |
 | `npm run check:pipeline` | Phase 3 (app running, Test provider): spend ≤ the estimate shown; regenerating one clip bills one clip; cached requests are free; the hybrid render works. |
+| `node scripts/checks/finishing-check.mjs <projectId>` | Finishing passes (app running, Test provider): upscale, cut-out and morph each bill exactly their estimate, asking again is free, and the editor and a render use all three. |
 | `npx tsx scripts/checks/shorts-check.mts <projectId>` | Phase 4: the Shorts cut starts before the drop, and the drop lands on a cut, both in the edit plan and in the rendered pixels. |
 
 ## Folders

@@ -8,6 +8,7 @@ import { ProviderError, type GenRequest, type GenResult, type Provider } from ".
  * Local ComfyUI. Export your workflow with "Save (API format)" to config/comfyui/image.json or
  * image_to_video.json and put these placeholders in its text fields:
  *   {{prompt}}  {{negative}}  {{seed}}  {{image}} (the uploaded keyframe's filename, for LoadImage)
+ *   {{end_image}} (last frame, for first→last-frame morph workflows such as Wan 2.2 FLF2V)
  */
 export function comfyProvider(baseUrl: string): Provider {
   const base = (baseUrl || "http://localhost:8188").replace(/\/$/, "");
@@ -58,7 +59,14 @@ export function comfyProvider(baseUrl: string): Provider {
       form.append("image", new Blob([fs.readFileSync(r.imagePath!)]), path.basename(r.imagePath!));
       form.append("overwrite", "true");
       const up = await call<{ name: string }>("/upload/image", { method: "POST", body: form });
-      return run(r, { prompt: r.prompt, negative: r.negative, seed: String(r.seed), image: up.name });
+      let end = "";
+      if (r.endImagePath) {
+        const f2 = new FormData();
+        f2.append("image", new Blob([fs.readFileSync(r.endImagePath)]), path.basename(r.endImagePath));
+        f2.append("overwrite", "true");
+        end = (await call<{ name: string }>("/upload/image", { method: "POST", body: f2 })).name;
+      }
+      return run(r, { prompt: r.prompt, negative: r.negative, seed: String(r.seed), image: up.name, end_image: end });
     },
   };
 }

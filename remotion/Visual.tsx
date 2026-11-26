@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { AbsoluteFill, Freeze, Img, OffthreadVideo, useVideoConfig } from "remotion";
+import { AbsoluteFill, Freeze, Img, OffthreadVideo, getRemotionEnvironment, useVideoConfig } from "remotion";
 import { presetConfig, type PresetConfig } from "../lib/presets/configs";
 import { ShaderCanvas, type Uniforms } from "./gl/ShaderCanvas";
 import { beatInfo, envAt, envMax, hexToRgb, hueRotate, motionTime, rand, sectionAt } from "./lib/music";
@@ -31,7 +31,7 @@ export function Visual(props: Props) {
   const { map, style, t, frame } = props;
   const { width, height, fps } = useVideoConfig();
   const preset = presetConfig(props.preset);
-  const segs = useMemo(() => buildTimeline(map, preset, style, props.mode, props.clips), [map, preset, style, props.mode, props.clips]);
+  const segs = useMemo(() => buildTimeline(map, preset, style, props.mode, props.clips, props.bridges ?? []), [map, preset, style, props.mode, props.clips, props.bridges]);
   const colors = useMemo(() => preset.palette.map((h) => hueRotate(hexToRgb(h), style.hueShift)), [preset, style.hueShift]);
 
   const si = segmentAt(segs, t);
@@ -74,7 +74,9 @@ export function Visual(props: Props) {
 
   // `tt` lets a transition draw a shot at another time (freeze-cut holds the outgoing shot still).
   const layer = (seg: Segment, css: React.CSSProperties, tt: number = t) =>
-    seg.clip ? (
+    seg.bridge ? (
+      <BridgeLayer key={`br${props.slotPrefix ?? ""}${seg.index}`} seg={seg} local={tt - seg.start} fps={fps} style={css} />
+    ) : seg.clip ? (
       <ClipLayer
         key={`clip${props.slotPrefix ?? ""}${seg.index}`}
         seg={seg}
@@ -189,7 +191,7 @@ export function Visual(props: Props) {
     : sec.type === "breakdown" ? "saturate(0.8) brightness(0.88)"
     : sec.type === "build" ? `brightness(${0.95 + 0.15 * secProgress}) saturate(${1 + 0.15 * secProgress})`
     : "saturate(0.92)";
-  const usesClip = !!cur.clip || (prev?.clip && p < 1);
+  const usesClip = !!(cur.clip || cur.bridge) || (!!(prev?.clip || prev?.bridge) && p < 1);
   // White kick flashes over real footage look cheap: keep them subtle on clips.
   const kickFlash = Math.min(artistFmt ? (usesClip ? 0 : 0.15) : usesClip ? (capcut ? 0.06 : 0.12) : 1, kick * r.kickFlash * k * (section.type === "breakdown" ? 0.3 : 1));
   // CapCut hard cut: a 2-frame flash frame on the cut.
@@ -238,22 +240,59 @@ export function Visual(props: Props) {
       {style.letterbox && <Letterbox />}
       {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} colors={colors} />}
       {artistFmt && !props.noCaptions && <ArtistCaptions {...props} t={t} />}
+      {style.textBehind && !props.noCaptions && cur.clip?.ref.matteSrc && !showPrev && flash + kickFlash < 0.05 && canShowAlphaVideo() && (
+        // Text behind you: the cut-out of the subject, drawn over the captions with the exact same
+        // frame, framing and camera motion as the clip underneath.
+        <div style={band ? { position: "absolute", left: 0, right: 0, top: (height - bandH) / 2, height: bandH, overflow: "hidden" } : { position: "absolute", inset: 0 }}>
+          <AbsoluteFill style={{ transform: stackTransform, filter: grade }}>
+            <ClipLayer
+              seg={cur}
+              local={capcut ? (cur.end - cur.start) * velocityRamp((t - cur.start) / Math.max(0.01, cur.end - cur.start)) : t - cur.start}
+              fps={fps}
+              style={{}}
+              src={cur.clip.ref.matteSrc}
+              transparent
+            />
+          </AbsoluteFill>
+        </div>
+      )}
       {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
     </AbsoluteFill>
   );
 }
 
-function ClipLayer({ seg, local, fps, style }: { seg: Segment; local: number; fps: number; style: React.CSSProperties }) {
+function ClipLayer({ seg, local, fps, style, src, transparent }: { seg: Segment; local: number; fps: number; style: React.CSSProperties; src?: string; transparent?: boolean }) {
   const c = seg.clip!;
   const frame = Math.max(0, Math.round(clipTime(c, local) * fps));
   const sx = (c.mirror ? -1 : 1) * c.zoom;
   return (
     <AbsoluteFill style={{ ...style, transform: `${style.transform ?? ""} scale(${sx}, ${c.zoom})` }}>
       <Freeze frame={frame}>
-        <OffthreadVideo src={c.ref.src} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <OffthreadVideo src={src ?? c.ref.src} muted transparent={transparent} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </Freeze>
     </AbsoluteFill>
   );
+}
+
+/** AI morph: the whole first→last-frame clip, time-stretched to fill the morph window. */
+function BridgeLayer({ seg, local, fps, style }: { seg: Segment; local: number; fps: number; style: React.CSSProperties }) {
+  const b = seg.bridge!;
+  const len = Math.max(0.1, seg.end - seg.start);
+  const d = Math.max(0.1, b.duration - 0.05);
+  const frame = Math.max(0, Math.round(Math.min(d, (Math.max(0, local) / len) * d) * fps));
+  return (
+    <AbsoluteFill style={style}>
+      <Freeze frame={frame}>
+        <OffthreadVideo src={b.src} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </Freeze>
+    </AbsoluteFill>
+  );
+}
+
+/** Transparent (VP9 alpha) video works in renders and in Chrome/Firefox previews, not in Safari's player. */
+function canShowAlphaVideo(): boolean {
+  if (!getRemotionEnvironment().isPlayer || typeof navigator === "undefined") return true;
+  return !/^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
 }
 
 /** Ties AI footage to the preset: a palette tint and (deterministic) film grain. */

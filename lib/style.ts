@@ -30,6 +30,8 @@ export function writeStyle(projectId: string, style: Partial<StyleConfig>): Styl
   next.looks = { flare: !!lk.flare, leaks: !!lk.leaks, vhs: !!lk.vhs, halftone: !!lk.halftone };
   next.dropAnimation = next.dropAnimation === "shutter" ? "shutter" : "explode";
   next.lightSweep = !!next.lightSweep;
+  if (!["off", "sections", "drops"].includes(next.morph ?? "")) next.morph = "off";
+  next.textBehind = !!next.textBehind;
   const shakes = ["off", "handheld-normal-mild", "handheld-normal-strong", "handheld-normal-extreme", "handheld-wideangle-mild", "handheld-wideangle-strong", "handheld-tele-mild", "handheld-tele-strong", "rig-6d-shake", "rig-6d-wobble"];
   if (!shakes.includes(next.cameraShake)) next.cameraShake = "off";
   if (!["off", "drops", "bars"].includes(next.beatAccent)) next.beatAccent = "off";

@@ -24,7 +24,7 @@ export function ConfirmSpend({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   projectId: string;
-  kind: "keyframes" | "clips";
+  kind: "keyframes" | "clips" | "bridge" | "upscale" | "matte";
   shotIds?: string[];
   tier?: "draft" | "final";
   onStarted: () => void;
@@ -33,20 +33,22 @@ export function ConfirmSpend({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const idsKey = shotIds?.join(",");
+  const finishing = kind === "bridge" || kind === "upscale" || kind === "matte";
+  const url = `/api/projects/${projectId}/${finishing ? "enhance" : "generate"}`;
 
   useEffect(() => {
     if (!open) return;
     setEst(null);
     setErr(null);
-    api<EstimateResp>(`/api/projects/${projectId}/generate`, { method: "POST", json: { kind, shotIds: idsKey ? idsKey.split(",") : undefined, tier } })
+    api<EstimateResp>(url, { method: "POST", json: { kind, shotIds: idsKey ? idsKey.split(",") : undefined, tier } })
       .then(setEst)
       .catch((e) => setErr((e as Error).message));
-  }, [open, projectId, kind, idsKey, tier]);
+  }, [open, url, kind, idsKey, tier]);
 
   async function confirm() {
     setBusy(true);
     try {
-      await api(`/api/projects/${projectId}/generate`, { method: "POST", json: { kind, shotIds: est?.shotIds, tier, confirm: true } });
+      await api(url, { method: "POST", json: { kind, shotIds: est?.shotIds, tier, confirm: true } });
       onOpenChange(false);
       onStarted();
     } catch (e) {
@@ -60,7 +62,7 @@ export function ConfirmSpend({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogTitle>{kind === "keyframes" ? "Generate keyframes" : `Animate keyframes (${tier ?? "draft"} quality)`}</DialogTitle>
+        <DialogTitle>{kind === "keyframes" ? "Generate keyframes" : kind === "clips" ? `Animate keyframes (${tier ?? "draft"} quality)` : kind === "bridge" ? "Make AI morph transitions" : kind === "upscale" ? "Upscale clips to 1080p" : "Cut you out of the clips"}</DialogTitle>
         <DialogDescription className="mt-1">Review the cost before anything is sent to the provider.</DialogDescription>
         <div className="mt-5 space-y-3">
           {err && (

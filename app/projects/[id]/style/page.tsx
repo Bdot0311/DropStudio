@@ -316,6 +316,16 @@ export default function StyleStep({ params }: { params: Promise<{ id: string }> 
                 ))}
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">AI morph transitions (the last 2 bars before a section melt into the next shot)</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([["off", "Off"], ["drops", "Into drops"], ["sections", "Every section"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => set("morph", v)} className={cn("cursor-pointer rounded-md border px-1.5 py-1.5 text-[11px]", (style.morph ?? "off") === v ? "border-primary bg-primary/10 ring-1 ring-primary" : "hover:bg-accent")}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Needs AI clips on both sides. Make the morphs on the Generate step (Finishing touches); until then the normal transition plays.</p>
+            </div>
+            <Toggle id="behind" label="Captions behind you (cut-outs made on the Generate step)" checked={!!style.textBehind} onChange={(v) => set("textBehind", v)} />
             <Toggle id="sweep" label="Light sweep every phrase (HyperFrames)" checked={style.lightSweep} onChange={(v) => set("lightSweep", v)} />
             <Toggle id="letterbox" label="Cinematic letterbox bars (16:9 only)" checked={style.letterbox} onChange={(v) => set("letterbox", v)} />
           </CardContent>

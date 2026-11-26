@@ -21,7 +21,11 @@ export type ClipRef = {
   duration: number; // seconds
   section: Section["type"]; // the section type it was generated for
   character?: boolean; // features the user's character
+  matteSrc?: string; // transparent cut-out of the subject (VP9 alpha WebM), for text-behind-you
 };
+
+/** An AI morph clip that goes from shot `from` (its last frame) to shot `to` (its keyframe). */
+export type BridgeRef = { from: string; to: string; src: string; duration: number };
 
 export type VideoProps = {
   map: LiteMap;
@@ -33,6 +37,7 @@ export type VideoProps = {
   audioSrc: string | null; // preview only; final renders are muted and muxed by FFmpeg
   coverSrc: string | null;
   clips: ClipRef[];
+  bridges?: BridgeRef[];
   fps: number;
   width: number;
   height: number;

@@ -16,7 +16,7 @@ import { Cancelled, status } from "./queue";
 
 const CACHE_DIR = path.join(DATA_DIR, "cache");
 
-async function save(result: GenResult, key: string, ext: string): Promise<string> {
+export async function save(result: GenResult, key: string, ext: string): Promise<string> {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   const target = path.join(CACHE_DIR, `${key}.${ext}`);
   if (result.file) {
@@ -30,7 +30,7 @@ async function save(result: GenResult, key: string, ext: string): Promise<string
   return `cache/${key}.${ext}`;
 }
 
-async function withRetries<T>(fn: () => Promise<T>, onRetry: (n: number, e: Error) => void, tries = 3): Promise<T> {
+export async function withRetries<T>(fn: () => Promise<T>, onRetry: (n: number, e: Error) => void, tries = 3): Promise<T> {
   for (let n = 1; ; n++) {
     try {
       return await fn();

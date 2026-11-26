@@ -8,6 +8,7 @@ import { presetConfig } from "./presets/configs";
 import { getProject, listAssets, readMusicMap } from "./projects";
 import type { SectionType } from "./types";
 import { DEFAULT_WORLD, directShot } from "./director";
+import { enhancementIndex } from "./enhance";
 
 const newId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
 
@@ -148,11 +149,12 @@ export function addShot(projectId: string, sectionIndex: number): Shot {
 }
 
 /** Ready clips for the editor (src is "cache/<file>", resolved to a URL by the caller). */
-export function listClipRefs(projectId: string): { id: string; src: string; duration: number; section: SectionType; character: boolean }[] {
+export function listClipRefs(projectId: string): { id: string; src: string; duration: number; section: SectionType; character: boolean; matte?: string }[] {
+  const ix = enhancementIndex(projectId);
   return listShots(projectId)
     // Any shot that has a clip file counts (a failed re-generation must not drop footage you already have).
     .filter((s) => s.status !== "rejected" && s.clip && fs.existsSync(path.join(DATA_DIR, s.clip)))
-    .map((s) => ({ id: s.id, src: s.clip!, duration: s.clip_duration ?? 5, section: s.section_type, character: !!s.character }));
+    .map((s) => ({ id: s.id, src: ix.clipOf(s)!, duration: s.clip_duration ?? 5, section: s.section_type, character: !!s.character, matte: ix.matteOf(s) ?? undefined }));
 }
 
 /** Which provider made a generated file ("cache/<key>.png|mp4"), from the generation cache. */

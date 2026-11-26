@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { CostMeter } from "@/components/ai/cost-meter";
 import { ProviderBanner } from "@/components/ai/provider-banner";
 import { ConfirmSpend } from "@/components/ai/confirm-spend";
+import { FinishingCard } from "@/components/ai/finishing";
 import { STATUS_LABEL, ShotThumb } from "@/components/ai/shot-card";
 import { jobActive, useShots } from "@/hooks/use-shots";
 import { SECTION_COLORS } from "@/lib/grid";
@@ -78,6 +79,7 @@ export default function GenerateStep({ params }: { params: Promise<{ id: string 
               <div className="text-xs text-muted-foreground">{ready.length} clips ready · {Math.round(footage)} s of footage</div>
             </CardContent>
           </Card>
+          {ready.length > 0 && <FinishingCard projectId={id} onDone={() => mutate()} />}
           <Button asChild variant="outline" className="w-full" disabled={!ready.length}>
             <Link href={`/projects/${id}/render`}>Continue to Render <ArrowRight /></Link>
           </Button>

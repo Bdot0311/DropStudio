@@ -5,7 +5,7 @@ import { ROOT } from "./paths";
 import { getSetting } from "./settings";
 
 export type ProviderId = "fal" | "replicate" | "comfyui" | "mock";
-export type ModelPrice = { per_image?: number; per_second?: number; per_video?: number };
+export type ModelPrice = { per_image?: number; per_second?: number; per_video?: number; per_megapixel_frame?: number };
 export type ModelDef = {
   id: string;
   label: string;
@@ -15,8 +15,10 @@ export type ModelDef = {
   input?: Record<string, unknown>;
   fields?: Record<string, string>;
   output?: string;
+  /** Upscale models: output height (for the estimate). */
+  target_height?: number;
 };
-export type ModelsConfig = { providers: Record<ProviderId, { label: string; image: ModelDef[]; image_to_video: ModelDef[]; character_image?: ModelDef[] }> };
+export type ModelsConfig = { providers: Record<ProviderId, { label: string; image: ModelDef[]; image_to_video: ModelDef[]; character_image?: ModelDef[]; bridge?: ModelDef[]; upscale?: ModelDef[]; matte?: ModelDef[] }> };
 
 export function readModels(): ModelsConfig {
   return JSON.parse(fs.readFileSync(path.join(ROOT, "config", "models.json"), "utf8"));
@@ -40,6 +42,10 @@ export function selectedModels(provider = activeProvider()) {
     character: pick(cfg.character_image?.length ? cfg.character_image : cfg.image, getSetting(`${provider}_character_model` as never)),
     draft: pick(cfg.image_to_video, getSetting(`${provider}_video_draft` as never), "draft"),
     final: pick(cfg.image_to_video, getSetting(`${provider}_video_final` as never), "final"),
+    // Finishing passes (only some providers offer them).
+    bridge: cfg.bridge?.[0] ?? null,
+    upscale: cfg.upscale?.[0] ?? null,
+    matte: cfg.matte?.[0] ?? null,
   };
 }
 

@@ -1,7 +1,7 @@
 // The musical edit: where every cut lands, what's on screen, and how we transition.
 import type { PresetConfig, SceneId, StyleConfig, TransitionId } from "../../lib/presets/configs";
 import type { RenderMode, SectionType } from "../../lib/types";
-import type { ClipRef, LiteMap } from "../types";
+import type { BridgeRef, ClipRef, LiteMap } from "../types";
 import { rand } from "./music";
 
 export type Segment = {
@@ -15,7 +15,70 @@ export type Segment = {
   transition: TransitionId;
   transitionSeconds: number;
   clip: null | { ref: ClipRef; speed: number; mirror: boolean; reverse: boolean; zoom: number; offset: number };
+  /** AI morph segment: plays a first→last-frame clip from the previous shot into the next one. */
+  bridge?: { src: string; duration: number; from: string; to: string } | null;
 };
+
+/** Where an AI morph would go: the last `W` seconds before section boundary `T`, from clip A to clip B. */
+export type MorphSlot = { T: number; W: number; from: string; to: string };
+
+/** Morph slots for this edit: 2 bars before each section change (or only drops) between two AI shots. */
+export function morphPlan(segs: Segment[], map: LiteMap, style: StyleConfig, override?: StyleConfig["morph"]): MorphSlot[] {
+  const mode = override ?? style.morph ?? "off";
+  if (mode === "off") return [];
+  const bar = (60 / map.bpm) * 4;
+  const out: MorphSlot[] = [];
+  map.sections.forEach((sec, si) => {
+    if (si === 0 || (mode === "drops" && sec.type !== "drop")) return;
+    const prev = map.sections[si - 1];
+    const T = sec.start;
+    const W = Math.min(2 * bar, (prev.end - prev.start) / 2);
+    if (W < bar * 0.5) return;
+    const a = segs[segmentAt(segs, T - W + 1e-3)];
+    const b = segs[segmentAt(segs, T + 1e-3)];
+    if (!a?.clip || !b?.clip || a.section === b.section || a.clip.ref.id === b.clip.ref.id) return;
+    out.push({ T, W, from: a.clip.ref.id, to: b.clip.ref.id });
+  });
+  return out;
+}
+
+/** Swap the time before each planned boundary for its morph clip (only where one has been generated). */
+function applyMorphs(segs: Segment[], slots: MorphSlot[], bridges: BridgeRef[], beat: number): Segment[] {
+  let out = segs;
+  for (const s of slots) {
+    const br = bridges.find((b) => b.from === s.from && b.to === s.to);
+    if (!br) continue;
+    const t0 = s.T - s.W;
+    const next: Segment[] = [];
+    let inserted = false;
+    for (const g of out) {
+      if (g.end <= t0 + 1e-6 || g.start >= s.T - 1e-6) {
+        if (!inserted && g.start >= s.T - 1e-6) {
+          next.push(bridgeSeg(out, t0, s, br, beat));
+          inserted = true;
+        }
+        // the shot we morph into starts from its first frame (the morph ends on its keyframe)
+        if (g.clip && Math.abs(g.start - s.T) < 1e-6) next.push({ ...g, clip: { ...g.clip, offset: 0 } });
+        else next.push(g);
+      } else if (g.start < t0 - 1e-6) {
+        // cut the shot that is playing when the morph starts
+        const len = t0 - g.start;
+        if (len > 0.08) next.push({ ...g, end: t0, transitionSeconds: Math.min(g.transitionSeconds, len * 0.5) });
+      }
+    }
+    if (!inserted) next.push(bridgeSeg(out, t0, s, br, beat));
+    out = next.map((g, i) => ({ ...g, index: i }));
+  }
+  return out;
+}
+
+function bridgeSeg(segs: Segment[], t0: number, s: MorphSlot, br: BridgeRef, beat: number): Segment {
+  const a = segs[segmentAt(segs, t0 + 1e-3)];
+  return {
+    ...a, start: t0, end: s.T, clip: null, transition: "crossfade", transitionSeconds: Math.min(beat * 0.5, s.W * 0.25),
+    bridge: { src: br.src, duration: br.duration, from: br.from, to: br.to },
+  };
+}
 
 const cache = new Map<string, Segment[]>();
 
@@ -26,8 +89,8 @@ export function usesClips(mode: RenderMode, type: SectionType): boolean {
   return false;
 }
 
-export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleConfig, mode: RenderMode, clips: ClipRef[]): Segment[] {
-  const key = `${map.duration}|${map.sections.map((s) => `${s.type}${s.start}`).join(",")}|${preset.id}|${style.cutRate}|${style.transitionMode}|${mode}|${clips.map((c) => c.id).join(",")}|${map.beats[0]}`;
+export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleConfig, mode: RenderMode, clips: ClipRef[], bridges: BridgeRef[] = []): Segment[] {
+  const key = `${map.duration}|${map.sections.map((s) => `${s.type}${s.start}`).join(",")}|${preset.id}|${style.cutRate}|${style.transitionMode}|${style.editStyle}|${style.morph}|${mode}|${clips.map((c) => c.id + (c.matteSrc ? "m" : "")).join(",")}|${bridges.map((b) => b.from + b.to).join(",")}|${map.beats[0]}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -140,9 +203,10 @@ export function buildTimeline(map: LiteMap, preset: PresetConfig, style: StyleCo
     }
   });
 
+  const final = bridges.length ? applyMorphs(segs, morphPlan(segs, map, style), bridges, beat) : segs;
   if (cache.size > 20) cache.clear();
-  cache.set(key, segs);
-  return segs;
+  cache.set(key, final);
+  return final;
 }
 
 export function segmentAt(segs: Segment[], t: number): number {

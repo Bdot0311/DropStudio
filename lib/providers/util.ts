@@ -10,7 +10,7 @@ export const sleep = (ms: number, signal?: AbortSignal) =>
 
 export function dataUri(file: string): string {
   const ext = path.extname(file).slice(1).toLowerCase();
-  const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
+  const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "mp4" ? "video/mp4" : ext === "webm" ? "video/webm" : "image/png";
   return `data:${mime};base64,${fs.readFileSync(file).toString("base64")}`;
 }
 
