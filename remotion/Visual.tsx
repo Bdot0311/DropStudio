@@ -234,13 +234,10 @@ export function Visual(props: Props) {
       {acc && <AccentFlash scale={acc.flashScale} opacity={0.45 * acc.flashOpacity * (1 - clamp01(flash + kickFlash))} color={colors[3].map((c) => Math.round(255 * (0.7 + 0.3 * c))).join(",")} />}
       {style.lightSweep && <LightSweep map={map} t={t} width={width} colors={colors} />}
       {!capcut && !artistFmt && <TitleLayer {...props} presetCfg={preset} />}
-      {(flash > 0 || kickFlash > 0.01) && (
-        <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
-      )}
       {style.letterbox && <Letterbox />}
       {capcut && !props.noCaptions && <Captions {...props} presetCfg={preset} colors={colors} />}
       {artistFmt && !props.noCaptions && <ArtistCaptions {...props} t={t} />}
-      {style.textBehind && !props.noCaptions && cur.clip?.ref.matteSrc && !showPrev && flash + kickFlash < 0.05 && canShowAlphaVideo() && (
+      {style.textBehind && !props.noCaptions && cur.clip?.ref.matteSrc && !showPrev && canShowAlphaVideo() && (
         // Text behind you: the cut-out of the subject, drawn over the captions with the exact same
         // frame, framing and camera motion as the clip underneath.
         <div style={band ? { position: "absolute", left: 0, right: 0, top: (height - bandH) / 2, height: bandH, overflow: "hidden" } : { position: "absolute", inset: 0 }}>
@@ -255,6 +252,10 @@ export function Visual(props: Props) {
             />
           </AbsoluteFill>
         </div>
+      )}
+      {/* flashes go over everything, including the cut-out, so a flash never reveals the layering */}
+      {(flash > 0 || kickFlash > 0.01) && (
+        <AbsoluteFill style={{ background: `rgb(${colors[3].map((c) => Math.round(255 * (0.75 + 0.25 * c))).join(",")})`, opacity: clamp01(flash + kickFlash), mixBlendMode: "screen" }} />
       )}
       {style.debug && <DebugOverlay {...props} seg={cur} kick={kick} />}
     </AbsoluteFill>
