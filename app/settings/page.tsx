@@ -168,7 +168,7 @@ export default function SettingsPage() {
   );
 }
 
-type ModelOpt = { id: string; label: string; tier?: string };
+type ModelOpt = { id: string; label: string; tier?: string; recommended?: boolean };
 function ModelPickers({ provider, form, set }: { provider: string; form: Record<string, string>; set: (k: string) => (v: string) => void }) {
   const { data } = useSWR<Record<string, { label: string; image: ModelOpt[]; video: ModelOpt[]; character: ModelOpt[] }>>("/api/models", fetcher);
   const p = data?.[provider];
@@ -187,8 +187,25 @@ function ModelPickers({ provider, form, set }: { provider: string; form: Record<
       </div>
     );
   };
+  const rec = (list: ModelOpt[]) => list.find((m) => m.recommended)?.id;
+  const best: [string, string | undefined][] = [
+    [`${provider}_image_model`, rec(p.image)],
+    [`${provider}_character_model`, rec(p.character ?? [])],
+    [`${provider}_video_final`, rec(p.video)],
+  ];
+  const usingBest = best.every(([k, id]) => !id || (form[k] || id) === id);
   return (
     <div className="grid gap-3 sm:grid-cols-2">
+      {best.some(([, id]) => id) && (
+        <div className="flex items-center gap-2 rounded-md border bg-muted/30 p-2.5 text-xs sm:col-span-2">
+          <span className="text-muted-foreground">
+            {usingBest ? "Using the recommended models (Seedream 4.5 keyframes, Nano Banana Pro for you, Kling 3.0 Pro clips)." : "You've picked cheaper models. Cheap keyframes are the biggest cause of weak-looking clips."}
+          </span>
+          {!usingBest && (
+            <Button size="sm" variant="secondary" className="ml-auto" onClick={() => best.forEach(([k, id]) => id && set(k)(id))}>Use recommended</Button>
+          )}
+        </div>
+      )}
       {pick(`${provider}_image_model`, "Keyframe images", p.image)}
       {p.character?.length > 0 && pick(`${provider}_character_model`, "Images featuring your character", p.character)}
       {pick(`${provider}_video_draft`, "Clips: draft tier", p.video, "draft")}

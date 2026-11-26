@@ -57,7 +57,7 @@ Every storyboard shot is designed like a music-video shot:
 
 All shots share one **story world and wardrobe**, which you can edit on the Storyboard. Keyframes get a cinematic still prompt, and the video model gets a separate motion prompt (camera + action + VFX). You can change the camera move or VFX per shot; only that clip is re-generated.
 
-Video models (Settings): **Kling 2.6 Pro** is the Final default (about $0.35 per 5 s clip). **Veo 3.1 Fast** and **Seedance 2.0** are premium options. Open models from fal are also in the menus: **Z-Image Turbo** and **Qwen-Image** for keyframes, **Qwen-Image-Edit** for character shots, and **Wan 2.2 A14B 720p** as a sharper Draft tier. The **Cinematic** format plays each clip's camera move at real speed, from its first frame, cut on 2-bar lines with a flash on the drop.
+Models (Settings): fal runs the real third-party models. The defaults are **Seedream 4.5** (ByteDance) for keyframes, **Nano Banana Pro** (Google) for shots of you, and **Kling 3.0 Pro** (Kuaishou) for Final clips, about $0.56 per 5 s clip. **Veo 3.1** (Google), **Seedance 1.0 Pro**, **Seedance 2.0** and **Hailuo 02 Pro** are premium options; Kling 2.6/2.5, Veo 3.1 Fast, Wan, FLUX and Qwen are cheaper ones. If you picked cheap models earlier, Settings shows a **Use recommended** button. Keyframe quality matters most: the video model can only animate what's in the keyframe. The **Cinematic** format plays each clip's camera move at real speed, from its first frame, cut on 2-bar lines with a flash on the drop.
 
 ### Finishing touches (Generate step)
 

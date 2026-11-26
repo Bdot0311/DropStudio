@@ -15,6 +15,8 @@ export type ModelDef = {
   input?: Record<string, unknown>;
   fields?: Record<string, string>;
   output?: string;
+  /** Shown as the recommended pick in Settings. */
+  recommended?: boolean;
   /** Upscale models: output height (for the estimate). */
   target_height?: number;
 };

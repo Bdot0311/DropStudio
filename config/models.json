@@ -5,8 +5,47 @@
       "label": "fal.ai",
       "image": [
         {
+          "id": "fal-ai/bytedance/seedream/v4.5/text-to-image",
+          "label": "Seedream 4.5 by ByteDance (recommended, 2K, $0.04)",
+          "recommended": true,
+          "price": {
+            "per_image": 0.04
+          },
+          "input": {
+            "image_size": {
+              "width": 2560,
+              "height": 1440
+            },
+            "num_images": 1,
+            "enable_safety_checker": true
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
+          "id": "fal-ai/flux-pro/v1.1-ultra",
+          "label": "FLUX1.1 Pro Ultra (photoreal, 2K, $0.06)",
+          "price": {
+            "per_image": 0.06
+          },
+          "input": {
+            "aspect_ratio": "16:9",
+            "num_images": 1,
+            "output_format": "png",
+            "safety_tolerance": "3"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "seed": "seed"
+          },
+          "output": "images.0.url"
+        },
+        {
           "id": "fal-ai/flux/schnell",
-          "label": "FLUX.1 schnell (cheap drafts)",
+          "label": "FLUX.1 schnell (cheap test drafts, low detail)",
           "price": {
             "per_image": 0.003
           },
@@ -79,7 +118,7 @@
       "image_to_video": [
         {
           "id": "fal-ai/wan-25-preview/image-to-video",
-          "label": "Wan 2.5 480p (draft tier)",
+          "label": "Wan 2.5 480p (cheap drafts, soft)",
           "tier": "draft",
           "price": {
             "per_second": 0.05
@@ -94,6 +133,84 @@
             "image": "image_url",
             "negative": "negative_prompt",
             "seed": "seed"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/kling-video/v3/pro/image-to-video",
+          "label": "Kling 3.0 Pro by Kuaishou (recommended, $0.56 per 5 s)",
+          "tier": "final",
+          "recommended": true,
+          "price": {
+            "per_second": 0.112
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": "5",
+            "generate_audio": false,
+            "cfg_scale": 0.5
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "start_image_url",
+            "negative": "negative_prompt"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/veo3.1/image-to-video",
+          "label": "Google Veo 3.1 1080p (top quality, $1.60 per 8 s)",
+          "tier": "premium",
+          "price": {
+            "per_second": 0.2
+          },
+          "clip_seconds": 8,
+          "input": {
+            "duration": "8s",
+            "generate_audio": false,
+            "resolution": "1080p"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "negative": "negative_prompt",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+          "label": "Seedance 1.0 Pro 1080p by ByteDance ($0.62 per 5 s)",
+          "tier": "premium",
+          "price": {
+            "per_video": 0.62
+          },
+          "clip_seconds": 5,
+          "input": {
+            "duration": "5",
+            "resolution": "1080p"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url",
+            "seed": "seed"
+          },
+          "output": "video.url"
+        },
+        {
+          "id": "fal-ai/minimax/hailuo-02/pro/image-to-video",
+          "label": "MiniMax Hailuo 02 Pro 1080p ($0.48 per 6 s, great motion)",
+          "tier": "premium",
+          "price": {
+            "per_second": 0.08
+          },
+          "clip_seconds": 6,
+          "input": {
+            "prompt_optimizer": false
+          },
+          "fields": {
+            "prompt": "prompt",
+            "image": "image_url"
           },
           "output": "video.url"
         },
@@ -122,8 +239,8 @@
         },
         {
           "id": "fal-ai/kling-video/v2.6/pro/image-to-video",
-          "label": "Kling 2.6 Pro (final tier, recommended)",
-          "tier": "final",
+          "label": "Kling 2.6 Pro ($0.35 per 5 s)",
+          "tier": "final-alt",
           "price": {
             "per_second": 0.07
           },
@@ -198,6 +315,24 @@
       ],
       "character_image": [
         {
+          "id": "fal-ai/nano-banana-pro/edit",
+          "label": "Nano Banana Pro by Google (recommended, best likeness, $0.15)",
+          "price": {
+            "per_image": 0.15
+          },
+          "input": {
+            "num_images": 1,
+            "output_format": "png",
+            "aspect_ratio": "16:9"
+          },
+          "fields": {
+            "prompt": "prompt",
+            "references": "image_urls"
+          },
+          "output": "images.0.url",
+          "recommended": true
+        },
+        {
           "id": "fal-ai/flux-pro/kontext",
           "label": "FLUX Kontext Pro (1 reference photo)",
           "price": {
@@ -224,23 +359,6 @@
           "input": {
             "num_images": 1,
             "output_format": "png"
-          },
-          "fields": {
-            "prompt": "prompt",
-            "references": "image_urls"
-          },
-          "output": "images.0.url"
-        },
-        {
-          "id": "fal-ai/nano-banana-pro/edit",
-          "label": "Nano Banana Pro (best likeness, up to 4 photos, price approximate)",
-          "price": {
-            "per_image": 0.15
-          },
-          "input": {
-            "num_images": 1,
-            "output_format": "png",
-            "aspect_ratio": "16:9"
           },
           "fields": {
             "prompt": "prompt",
